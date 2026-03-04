@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  /* ลงทะเบียนสี Custom ตามที่คุณต้องการ */
+  --color-primary-red: #D90429;
+  --color-secondary-red: #EF233C;
+  --color-dark-bg: #2B2D42;
+  --color-light-gray: #EDF2F4;
+  --color-text-main: #2B2D42;
+
+  /* เชื่อมโยงสีเข้ากับระบบของ daisyUI */
+  --color-primary: var(--color-primary-red);
+  --color-secondary: var(--color-secondary-red);
+  --color-base-100: #FFFFFF;
+  --color-base-200: var(--color-light-gray);
+  --color-base-300: #D1D5DB;
+}
+
+/* ตั้งค่า Font และพื้นฐาน */
+:root {
+  --background: var(--color-light-gray);
+  --foreground: var(--color-text-main);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+}
