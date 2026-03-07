@@ -1,11 +1,16 @@
-import { Router } from 'express';
-import { generateImage } from '../controllers/generate.controller';
+import express from 'express';
+import multer from 'multer';
+import { generateImage } from '../controllers/generate.controller'; // (เปลี่ยน path ให้ตรงกับของคุณ)
 
-const router = Router();
+const router = express.Router();
 
-// เมื่อมี Request แบบ POST เข้ามาที่ /image ให้ไปเรียกใช้ Controller
-router.post('/image', generateImage);
+// 🟢 ตั้งค่า multer ให้เก็บไฟล์ไว้ใน Memory ชั่วคราว (เพื่อเอาไปแปลงเป็น Base64)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // ล็อกขนาดไฟล์ไม่เกิน 5MB ฝั่งเซิร์ฟเวอร์ด้วย
+});
 
-// ในอนาคตถ้ามี Video ก็มาเพิ่มตรงนี้ได้เลย เช่น router.post('/video', generateVideo);
+// 🟢 แทรก upload.single('image') เข้าไปตรงกลาง
+router.post('/image', upload.single('image'), generateImage);
 
 export default router;

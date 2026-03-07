@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import {
 	Wand2,
 	Video as VideoIcon,
@@ -10,11 +8,6 @@ import {
 	RefreshCw,
 	PlayCircle,
 	Volume2,
-	LayoutDashboard,
-	Settings as SettingsIcon,
-	Search,
-	Bell,
-	Sparkles
 } from "lucide-react";
 
 export default function VideoCreator() {
@@ -34,53 +27,7 @@ export default function VideoCreator() {
 	return (
 		<div className="min-h-screen bg-light-gray text-text-main flex flex-col md:flex-row font-sans">
 
-			{/* --- Sidebar --- */}
-			<aside className="w-full md:w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
-				<div className="h-20 flex items-center px-8 border-b border-gray-100">
-					<div className="flex items-center gap-3">
-						<span className="text-xl font-black tracking-tight text-dark-bg">
-							DEVAKORN<span className="text-primary-red">.</span>
-						</span>
-					</div>
-				</div>
-				<nav className="flex-1 px-4 py-8 space-y-1">
-					<Link href="/" className="flex items-center gap-3 px-4 py-2.5 text-text-main/60 hover:bg-light-gray hover:text-dark-bg rounded-lg font-medium transition-all">
-						<LayoutDashboard className="w-4 h-4" /> Overview
-					</Link>
-					<Link href="/image-studio" className="flex items-center gap-3 px-4 py-2.5 text-text-main/60 hover:bg-light-gray hover:text-dark-bg rounded-lg font-medium transition-all">
-						<Sparkles className="w-4 h-4" /> Image Studio
-					</Link>
-					{/* Active State อยู่ที่ Video Creator */}
-					<Link href="/video-creator" className="flex items-center gap-3 px-4 py-2.5 bg-primary-red/10 text-primary-red rounded-lg font-bold transition-all">
-						<VideoIcon className="w-4 h-4" /> Video Creator
-					</Link>
-					<Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-text-main/60 hover:bg-light-gray hover:text-dark-bg rounded-lg font-medium transition-all">
-						<SettingsIcon className="w-4 h-4" /> Settings
-					</Link>
-				</nav>
-			</aside>
-
 			<main className="flex-1 flex flex-col h-screen overflow-y-auto">
-				{/* Header */}
-				<header className="h-20 bg-white border-b border-gray-200 px-8 flex items-center justify-between sticky top-0 z-10">
-					<div className="flex items-center bg-light-gray border border-transparent focus-within:border-primary-red/30 w-96 rounded-lg px-3 py-2 transition-all">
-						<Search className="w-4 h-4 text-text-main/40 mr-2" />
-						<input type="text" placeholder="Search past video campaigns..." className="bg-transparent border-none outline-none text-sm w-full placeholder-text-main/40 text-dark-bg" />
-					</div>
-					<div className="flex items-center gap-6">
-						<button className="relative text-text-main/40 hover:text-primary-red transition-colors">
-							<Bell className="w-5 h-5" />
-						</button>
-						<div className="w-px h-6 bg-gray-200"></div>
-						<div className="flex items-center gap-3 cursor-pointer group">
-							<div className="text-right hidden sm:block">
-								<p className="text-sm font-bold text-dark-bg group-hover:text-primary-red transition-colors">Kidakorn Intha</p>
-								<p className="text-xs text-text-main/50">Admin</p>
-							</div>
-							<Image src="https://api.dicebear.com/7.x/avataaars/svg?seed=Coke" alt="avatar" width={36} height={36} className="rounded-full bg-light-gray border border-gray-200" unoptimized />
-						</div>
-					</div>
-				</header>
 
 				{/* Main Content */}
 				<div className="p-8 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
