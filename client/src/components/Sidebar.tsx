@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon } from "lucide-react";
+import { LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon, Wand2 } from "lucide-react";
 
 export default function Sidebar({ isOpen }: { isOpen: boolean }) {
 	const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
 		{ name: "Overview", href: "/", icon: LayoutDashboard },
 		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
 		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
+		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Settings", href: "/settings", icon: SettingsIcon },
 	];
 
