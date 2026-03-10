@@ -1,0 +1,24 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js" // 🟢 แก้เป็นตัวนี้เพื่อให้ Prisma สร้าง Client ได้ถูกต้อง
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 📦 พิมพ์เขียวตาราง User
+model User {
+  id       String  @id @default(cuid())
+  name     String?
+  email    String  @unique
+  password String?
+  image    String?
+
+  // 💰 ระบบกระเป๋าเงิน (Coin)
+  coinBalance Int @default(100) // สมัครปุ๊บ แถมให้ลองเล่นก่อน 100 เหรียญ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
