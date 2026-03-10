@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// Import Component ที่เราเพิ่งสร้าง
-import DashboardLayout from "@/components/DashboardLayout";
+import { Toaster } from "react-hot-toast";
+import AuthProvider from "@/components/AuthProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
 
 export const metadata: Metadata = {
   title: "Devakorn Creator AI",
@@ -18,11 +21,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {/* โยนหน้าที่คลุมหน้าเว็บทั้งหมดไปให้ DashboardLayout จัดการ */}
-        <DashboardLayout>
+      <body className={`${inter.variable} font-sans bg-gray-50 text-text-main antialiased`}>
+        <Toaster position="top-center" reverseOrder={false} />
+        <AuthProvider>
           {children}
-        </DashboardLayout>
+        </AuthProvider>
       </body>
     </html>
   );

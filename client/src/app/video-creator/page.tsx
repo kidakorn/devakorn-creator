@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import DashboardLayout from "@/components/DashboardLayout";
 
 const categories = [
 	'Product Commercial',
@@ -93,172 +94,171 @@ export default function VideoCreatorPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-[#f8f9fa] p-8">
-			{/* Header Section */}
-			<div className="mb-8 flex justify-between items-end">
-				<div>
-					<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2 tracking-tight">
-						Video Creator
-					</h1>
-					<p className="text-gray-500 mt-2 text-sm">
-						Bring your ideas to life with high-fidelity AI video generation.
-					</p>
-				</div>
-				<div className="bg-red-50 text-red-600 text-xs font-semibold px-4 py-1.5 rounded-full border border-red-100">
-					Powered by Google Veo
-				</div>
-			</div>
-
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-				{/* 🎛️ ฝั่งซ้าย: Input Controls */}
-				<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-					<h2 className="text-lg font-bold text-gray-800 mb-6">Your Concept</h2>
-
-					<div className="mb-8">
-						<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-							<span className="text-red-500">📐</span> Aspect Ratio
-						</label>
-						<div className="flex gap-4">
-							<button
-								onClick={() => setAspectRatio('16:9')}
-								className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9'
-									? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
-									: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-									}`}
-							>
-								<div className="w-6 h-3.5 border-2 border-current rounded-sm"></div>
-								16:9 (Landscape)
-							</button>
-
-							<button
-								onClick={() => setAspectRatio('9:16')}
-								className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16'
-									? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
-									: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-									}`}
-							>
-								<div className="w-3.5 h-6 border-2 border-current rounded-sm"></div>
-								9:16 (Portrait)
-							</button>
-						</div>
+		<DashboardLayout>
+			<div className="min-h-screen bg-[#f8f9fa] p-8">
+				{/* Header Section */}
+				<div className="mb-8 flex justify-between items-end">
+					<div>
+						<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2 tracking-tight">
+							Video Creator
+						</h1>
+						<p className="text-gray-500 mt-2 text-sm">
+							Bring your ideas to life with high-fidelity AI video generation.
+						</p>
 					</div>
+				</div>
 
-					<div className="mb-8">
-						<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-							<span className="text-red-500">🏷️</span> Video Style Category
-						</label>
-						<div className="flex flex-wrap gap-2">
-							{categories.map((cat) => (
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+					{/* 🎛️ ฝั่งซ้าย: Input Controls */}
+					<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+						<h2 className="text-lg font-bold text-gray-800 mb-6">Your Concept</h2>
+
+						<div className="mb-8">
+							<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+								<span className="text-red-500">📐</span> Aspect Ratio
+							</label>
+							<div className="flex gap-4">
 								<button
-									key={cat}
-									onClick={() => setSelectedCategory(cat)}
-									className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${selectedCategory === cat
-										? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200'
-										: 'bg-white text-gray-600 border-gray-200 hover:border-red-300 hover:bg-red-50'
+									onClick={() => setAspectRatio('16:9')}
+									className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9'
+										? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
+										: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
 										}`}
 								>
-									{cat}
+									<div className="w-6 h-3.5 border-2 border-current rounded-sm"></div>
+									16:9 (Landscape)
 								</button>
-							))}
-						</div>
-					</div>
 
-					<div className="mb-8">
-						<label className="block text-sm font-semibold text-gray-700 mb-2">
-							Scene Description
-						</label>
-						<textarea
-							rows={5}
-							className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none transition-all"
-							placeholder="e.g., A cinematic shot of a flying Thai Tuk-Tuk hovering above a neon-lit cyberpunk city, glowing wheels..."
-							value={prompt}
-							onChange={(e) => setPrompt(e.target.value)}
-						/>
-					</div>
-
-					{error && (
-						<div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6 border border-red-100">
-							{error}
-						</div>
-					)}
-
-					<button
-						onClick={handleGenerate}
-						disabled={isGenerating}
-						className={`w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 flex justify-center items-center gap-2 ${isGenerating
-							? 'bg-gray-400 cursor-not-allowed'
-							: 'bg-[#1e1e2d] hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5'
-							}`}
-					>
-						{isGenerating ? (
-							<>
-								<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-								Rendering Video...
-							</>
-						) : (
-							'Generate Video'
-						)}
-					</button>
-				</div>
-
-				{/* 📺 ฝั่งขวา: Video Result */}
-				<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
-					<h2 className="text-lg font-bold text-gray-800 mb-6 flex justify-between items-center">
-						Generated Result
-					</h2>
-
-					<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-75">
-						{isGenerating ? (
-							<div className="flex flex-col items-center animate-pulse">
-								<div className="w-14 h-14 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin mb-4 shadow-lg"></div>
-								<p className="text-gray-600 font-semibold">Creating your masterpiece...</p>
-								<p className="text-xs text-gray-400 mt-2">This may take a minute</p>
+								<button
+									onClick={() => setAspectRatio('9:16')}
+									className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16'
+										? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
+										: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+										}`}
+								>
+									<div className="w-3.5 h-6 border-2 border-current rounded-sm"></div>
+									9:16 (Portrait)
+								</button>
 							</div>
-						) : videoUrl ? (
-							<video
-								key={videoUrl}
-								src={videoUrl}
-								controls
-								autoPlay
-								muted
-								loop
-								playsInline
-								className="w-full h-full object-contain bg-black rounded-lg shadow-sm"
-							>
-								Your browser does not support the video tag.
-							</video>
-						) : (
-							<div className="text-center">
-								<span className="text-4xl block mb-3 opacity-20">🎥</span>
-								<p className="text-gray-400 font-medium text-sm">Ready to create your next video.</p>
+						</div>
+
+						<div className="mb-8">
+							<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+								<span className="text-red-500">🏷️</span> Video Style Category
+							</label>
+							<div className="flex flex-wrap gap-2">
+								{categories.map((cat) => (
+									<button
+										key={cat}
+										onClick={() => setSelectedCategory(cat)}
+										className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${selectedCategory === cat
+											? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200'
+											: 'bg-white text-gray-600 border-gray-200 hover:border-red-300 hover:bg-red-50'
+											}`}
+									>
+										{cat}
+									</button>
+								))}
+							</div>
+						</div>
+
+						<div className="mb-8">
+							<label className="block text-sm font-semibold text-gray-700 mb-2">
+								Scene Description
+							</label>
+							<textarea
+								rows={5}
+								className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none transition-all"
+								placeholder="e.g., A cinematic shot of a flying Thai Tuk-Tuk hovering above a neon-lit cyberpunk city, glowing wheels..."
+								value={prompt}
+								onChange={(e) => setPrompt(e.target.value)}
+							/>
+						</div>
+
+						{error && (
+							<div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6 border border-red-100">
+								{error}
 							</div>
 						)}
+
+						<button
+							onClick={handleGenerate}
+							disabled={isGenerating}
+							className={`w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 flex justify-center items-center gap-2 ${isGenerating
+								? 'bg-gray-400 cursor-not-allowed'
+								: 'bg-[#1e1e2d] hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5'
+								}`}
+						>
+							{isGenerating ? (
+								<>
+									<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									Rendering Video...
+								</>
+							) : (
+								'Generate Video'
+							)}
+						</button>
 					</div>
 
-					{videoUrl && !isGenerating && (
-						<div className="mt-6 flex gap-4"> {/* 🟢 ใช้ flex gap-4 เพื่อจัดปุ่มให้อยู่ข้างกัน */}
-							{/* ปุ่มดาวน์โหลดเดิม */}
-							<a
-								href={videoUrl}
-								download={`Devakorn_Video_${Date.now()}.mp4`}
-								className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex justify-center items-center gap-2 cursor-pointer"
-							>
-								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-								Download
-							</a>
+					{/* 📺 ฝั่งขวา: Video Result */}
+					<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
+						<h2 className="text-lg font-bold text-gray-800 mb-6 flex justify-between items-center">
+							Generated Result
+						</h2>
 
-							{/* 🟢 ปุ่ม Share ใหม่ */}
-							<button
-								onClick={handleShare}
-								className="flex-1 bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166FE5] transition-colors flex justify-center items-center gap-2 shadow-sm"
-							>
-								<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
-								Share Video
-							</button>
+						<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-75">
+							{isGenerating ? (
+								<div className="flex flex-col items-center animate-pulse">
+									<div className="w-14 h-14 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin mb-4 shadow-lg"></div>
+									<p className="text-gray-600 font-semibold">Creating your masterpiece...</p>
+									<p className="text-xs text-gray-400 mt-2">This may take a minute</p>
+								</div>
+							) : videoUrl ? (
+								<video
+									key={videoUrl}
+									src={videoUrl}
+									controls
+									autoPlay
+									muted
+									loop
+									playsInline
+									className="w-full h-full object-contain bg-black rounded-lg shadow-sm"
+								>
+									Your browser does not support the video tag.
+								</video>
+							) : (
+								<div className="text-center">
+									<span className="text-4xl block mb-3 opacity-20">🎥</span>
+									<p className="text-gray-400 font-medium text-sm">Ready to create your next video.</p>
+								</div>
+							)}
 						</div>
-					)}
+
+						{videoUrl && !isGenerating && (
+							<div className="mt-6 flex gap-4"> {/* 🟢 ใช้ flex gap-4 เพื่อจัดปุ่มให้อยู่ข้างกัน */}
+								{/* ปุ่มดาวน์โหลดเดิม */}
+								<a
+									href={videoUrl}
+									download={`Devakorn_Video_${Date.now()}.mp4`}
+									className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex justify-center items-center gap-2 cursor-pointer"
+								>
+									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+									Download
+								</a>
+
+								{/* 🟢 ปุ่ม Share ใหม่ */}
+								<button
+									onClick={handleShare}
+									className="flex-1 bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166FE5] transition-colors flex justify-center items-center gap-2 shadow-sm"
+								>
+									<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+									Share Video
+								</button>
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
-		</div>
+		</DashboardLayout>
 	);
 }

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Wand2, Sparkles, Copy, CheckCircle2, Tags } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
-// 🟢 รายชื่อหมวดหมู่ Style ที่ให้ผู้ใช้เลือก
 const CATEGORIES = [
 	"Auto", "Photography", "Cinematic", "3D Render", "Anime", "Cyberpunk", "Watercolor", "Minimalist"
 ];
@@ -52,127 +52,126 @@ export default function PromptEnhancerPage() {
 	};
 
 	return (
-		<div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+		<DashboardLayout>
+			<div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
-			{/* Title Section */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-				<div>
-					<h1 className="text-2xl font-black text-dark-bg tracking-tight flex items-center gap-2">
-						<Wand2 className="w-6 h-6 text-primary-red" />
-						AI Prompt Magic
-					</h1>
-					<p className="text-text-main/60 text-sm mt-1 font-medium">Turn your simple ideas into professional, high-fidelity image prompts.</p>
-				</div>
-				<div className="px-3 py-1 bg-primary-red/10 border border-primary-red/20 rounded-full text-xs font-bold text-primary-red shadow-sm">
-					Powered by Gemini 1.5 Flash
-				</div>
-			</div>
-
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-				{/* Left Side: Input Form */}
-				<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-					<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20">
-						<h2 className="text-lg font-bold text-dark-bg">Your Concept</h2>
-						<p className="text-xs text-text-main/50 font-medium">Define your core idea and artistic direction.</p>
+				{/* Title Section */}
+				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+					<div>
+						<h1 className="text-2xl font-black text-dark-bg tracking-tight flex items-center gap-2">
+							<Wand2 className="w-6 h-6 text-primary-red" />
+							AI Prompt Magic
+						</h1>
+						<p className="text-text-main/60 text-sm mt-1 font-medium">Turn your simple ideas into professional, high-fidelity image prompts.</p>
 					</div>
+				</div>
 
-					<div className="p-5 sm:p-6 flex-1 flex flex-col gap-6">
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-						{/* 🟢 Category Selection Tags */}
-						<div className="space-y-3">
-							<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-								<Tags className="w-4 h-4 text-primary-red" /> Style Category
-							</label>
-							<div className="flex flex-wrap gap-2">
-								{CATEGORIES.map((cat) => (
-									<button
-										key={cat}
-										onClick={() => setSelectedCategory(cat)}
-										className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat
+					{/* Left Side: Input Form */}
+					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20">
+							<h2 className="text-lg font-bold text-dark-bg">Your Concept</h2>
+							<p className="text-xs text-text-main/50 font-medium">Define your core idea and artistic direction.</p>
+						</div>
+
+						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-6">
+
+							{/* 🟢 Category Selection Tags */}
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<Tags className="w-4 h-4 text-primary-red" /> Style Category
+								</label>
+								<div className="flex flex-wrap gap-2">
+									{CATEGORIES.map((cat) => (
+										<button
+											key={cat}
+											onClick={() => setSelectedCategory(cat)}
+											className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat
 												? 'bg-primary-red text-white border-primary-red shadow-sm transform scale-105'
 												: 'bg-light-gray/50 text-text-main/60 border-gray-200 hover:border-primary-red/50 hover:text-dark-bg'
-											}`}
-									>
-										{cat}
-									</button>
-								))}
+												}`}
+										>
+											{cat}
+										</button>
+									))}
+								</div>
 							</div>
-						</div>
 
-						<div className="space-y-3 flex-1 flex flex-col">
-							<label className="text-sm font-bold text-dark-bg">Core Idea</label>
-							<textarea
-								rows={4}
-								value={idea}
-								onChange={(e) => setIdea(e.target.value)}
-								placeholder="e.g., A bulldog riding a futuristic motorcycle..."
-								className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
-							/>
-						</div>
+							<div className="space-y-3 flex-1 flex flex-col">
+								<label className="text-sm font-bold text-dark-bg">Core Idea</label>
+								<textarea
+									rows={4}
+									value={idea}
+									onChange={(e) => setIdea(e.target.value)}
+									placeholder="e.g., A bulldog riding a futuristic motorcycle..."
+									className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
+								/>
+							</div>
 
-						<button
-							onClick={handleMagic}
-							disabled={isEnhancing || !idea}
-							className="w-full bg-dark-bg hover:bg-primary-red text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:hover:bg-dark-bg shadow-sm mt-auto active:scale-95"
-						>
-							{isEnhancing ? (
-								<>
-									<Sparkles className="w-4 h-4 animate-spin" />
-									Generating Magic...
-								</>
-							) : (
-								<>
-									<Wand2 className="w-4 h-4" />
-									Enhance Prompt
-								</>
-							)}
-						</button>
-					</div>
-				</section>
-
-				{/* Right Side: Result Output */}
-				<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col relative group">
-					<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex justify-between items-center">
-						<div>
-							<h2 className="text-lg font-bold text-dark-bg">Enhanced Result</h2>
-							<p className="text-xs text-text-main/50 font-medium">Ready to use in Image Studio</p>
-						</div>
-						{/* Copy Button */}
-						{enhancedPrompt && (
 							<button
-								onClick={copyToClipboard}
-								className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isCopied ? 'bg-green-100 text-green-700' : 'bg-light-gray text-text-main/60 hover:text-dark-bg hover:bg-gray-200'
-									}`}
+								onClick={handleMagic}
+								disabled={isEnhancing || !idea}
+								className="w-full bg-dark-bg hover:bg-primary-red text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:hover:bg-dark-bg shadow-sm mt-auto active:scale-95"
 							>
-								{isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-								{isCopied ? 'Copied!' : 'Copy'}
+								{isEnhancing ? (
+									<>
+										<Sparkles className="w-4 h-4 animate-spin" />
+										Generating Magic...
+									</>
+								) : (
+									<>
+										<Wand2 className="w-4 h-4" />
+										Enhance Prompt
+									</>
+								)}
 							</button>
-						)}
-					</div>
+						</div>
+					</section>
 
-					<div className="p-5 sm:p-6 flex-1 bg-light-gray/10 relative">
-						{isEnhancing ? (
-							<div className="absolute inset-0 flex flex-col items-center justify-center text-primary-red animate-pulse">
-								<Sparkles className="w-10 h-10 mb-2" />
-								<p className="text-sm font-bold text-dark-bg">Brainstorming details...</p>
+					{/* Right Side: Result Output */}
+					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col relative group">
+						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex justify-between items-center">
+							<div>
+								<h2 className="text-lg font-bold text-dark-bg">Enhanced Result</h2>
+								<p className="text-xs text-text-main/50 font-medium">Ready to use in Image Studio</p>
 							</div>
-						) : enhancedPrompt ? (
-							<div className="h-full">
-								<p className="text-sm text-dark-bg font-medium leading-relaxed whitespace-pre-wrap selection:bg-primary-red/20">
-									{enhancedPrompt}
-								</p>
-							</div>
-						) : (
-							<div className="absolute inset-0 flex flex-col items-center justify-center text-text-main/30">
-								<Wand2 className="w-10 h-10 mb-3 opacity-50" />
-								<p className="text-sm font-medium">The magic result will appear here.</p>
-							</div>
-						)}
-					</div>
-				</section>
+							{/* Copy Button */}
+							{enhancedPrompt && (
+								<button
+									onClick={copyToClipboard}
+									className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isCopied ? 'bg-green-100 text-green-700' : 'bg-light-gray text-text-main/60 hover:text-dark-bg hover:bg-gray-200'
+										}`}
+								>
+									{isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+									{isCopied ? 'Copied!' : 'Copy'}
+								</button>
+							)}
+						</div>
 
+						<div className="p-5 sm:p-6 flex-1 bg-light-gray/10 relative">
+							{isEnhancing ? (
+								<div className="absolute inset-0 flex flex-col items-center justify-center text-primary-red animate-pulse">
+									<Sparkles className="w-10 h-10 mb-2" />
+									<p className="text-sm font-bold text-dark-bg">Brainstorming details...</p>
+								</div>
+							) : enhancedPrompt ? (
+								<div className="h-full">
+									<p className="text-sm text-dark-bg font-medium leading-relaxed whitespace-pre-wrap selection:bg-primary-red/20">
+										{enhancedPrompt}
+									</p>
+								</div>
+							) : (
+								<div className="absolute inset-0 flex flex-col items-center justify-center text-text-main/30">
+									<Wand2 className="w-10 h-10 mb-3 opacity-50" />
+									<p className="text-sm font-medium">The magic result will appear here.</p>
+								</div>
+							)}
+						</div>
+					</section>
+
+				</div>
 			</div>
-		</div>
+		</DashboardLayout>
 	);
 }
