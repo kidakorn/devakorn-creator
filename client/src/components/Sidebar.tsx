@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
@@ -23,13 +24,23 @@ export default function Sidebar({ isOpen }: { isOpen: boolean }) {
 			{/* โลโก้ */}
 			<div className="h-16 flex items-center justify-center border-b border-gray-100 shrink-0">
 				{isOpen ? (
-					<span className="text-xl font-black tracking-tight text-primary-red whitespace-nowrap">
-						DEVAKORN
-					</span>
+					<div className="flex items-center gap-3">
+						<img
+							src="/favicon.ico"
+							alt="DEVAKORN Logo"
+							className="w-8 h-8 rounded-md"
+						/>
+						<span className="text-xl font-black tracking-tight text-primary-red whitespace-nowrap">
+							DEVAKORN
+						</span>
+					</div>
 				) : (
-					<span className="text-xl font-black tracking-tight text-primary-red">
-						D
-					</span>
+					// 🟢 ตอนพับ (Collapsed): โชว์แค่รูป และไม่มี shadow-sm ครับ
+					<img
+						src="/favicon.ico"
+						alt="DEVAKORN Logo"
+						className="w-8 h-8 rounded-md"
+					/>
 				)}
 			</div>
 

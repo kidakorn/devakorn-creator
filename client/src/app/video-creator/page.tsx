@@ -19,6 +19,7 @@ export default function VideoCreatorPage() {
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [videoBlobData, setVideoBlobData] = useState<Blob | null>(null);
 
 	const handleGenerate = async () => {
 		if (!prompt) {
@@ -55,9 +56,11 @@ export default function VideoCreatorPage() {
 
 				const videoObjectUrl = URL.createObjectURL(videoBlob);
 				setVideoUrl(videoObjectUrl);
+
 				console.log("✅ วิดีโอพร้อมเล่นแล้ว! ขนาดไฟล์จริง:", (videoBlob.size / 1024 / 1024).toFixed(2), "MB");
-				
-				setPrompt(''); 
+
+				setVideoBlobData(videoBlob);
+				setPrompt('');
 			}
 
 		} catch (err: any) {
@@ -65,6 +68,27 @@ export default function VideoCreatorPage() {
 			console.error("Frontend Error:", err);
 		} finally {
 			setIsGenerating(false);
+		}
+	};
+
+	const handleShare = async () => {
+		if (!videoBlobData) return;
+
+		// เช็คว่าเบราว์เซอร์รองรับการแชร์ไฟล์ไหม (ส่วนใหญ่บนมือถือและ Chrome รุ่นใหม่รองรับ)
+		if (navigator.canShare && navigator.canShare({ files: [new File([videoBlobData], 'video.mp4', { type: 'video/mp4' })] })) {
+			try {
+				const file = new File([videoBlobData], `Devakorn_${Date.now()}.mp4`, { type: 'video/mp4' });
+				await navigator.share({
+					title: 'สร้างสรรค์ด้วย DEVAKORN Creator AI',
+					text: 'ลองดูวิดีโอ AI สุดล้ำที่ฉันเพิ่งสร้างสิ!',
+					files: [file], // 🟢 ส่งตัวไฟล์วิดีโอไปตรงๆ เลย
+				});
+				console.log('✅ แชร์สำเร็จ!');
+			} catch (error) {
+				console.log('❌ ยกเลิกการแชร์ หรือแชร์ไม่สำเร็จ', error);
+			}
+		} else {
+			alert('เบราว์เซอร์ของคุณไม่รองรับการแชร์ไฟล์โดยตรง กรุณากดดาวน์โหลดแทนครับ');
 		}
 	};
 
@@ -212,14 +236,26 @@ export default function VideoCreatorPage() {
 					</div>
 
 					{videoUrl && !isGenerating && (
-						<a
-							href={videoUrl}
-							download={`Devakorn_Video_${Date.now()}.mp4`}
-							className="mt-6 w-full bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex justify-center items-center gap-2 cursor-pointer"
-						>
-							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-							Download Video
-						</a>
+						<div className="mt-6 flex gap-4"> {/* 🟢 ใช้ flex gap-4 เพื่อจัดปุ่มให้อยู่ข้างกัน */}
+							{/* ปุ่มดาวน์โหลดเดิม */}
+							<a
+								href={videoUrl}
+								download={`Devakorn_Video_${Date.now()}.mp4`}
+								className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex justify-center items-center gap-2 cursor-pointer"
+							>
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+								Download
+							</a>
+
+							{/* 🟢 ปุ่ม Share ใหม่ */}
+							<button
+								onClick={handleShare}
+								className="flex-1 bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166FE5] transition-colors flex justify-center items-center gap-2 shadow-sm"
+							>
+								<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+								Share Video
+							</button>
+						</div>
 					)}
 				</div>
 			</div>
