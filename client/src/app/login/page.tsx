@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 const loginSchema = z.object({
 	email: z.string().min(1, "กรุณากรอกอีเมล").email("รูปแบบอีเมลไม่ถูกต้อง"),
@@ -126,6 +127,13 @@ export default function LoginPage() {
 						Sign In
 					</button>
 				</form>
+
+				<p className="text-center text-sm text-gray-500 mt-8">
+					Don&apos;t have an account?{" "}
+					<Link href="/register" className="text-red-600 font-bold hover:underline">
+						Sign Up
+					</Link>
+				</p>
 
 			</div>
 		</div>

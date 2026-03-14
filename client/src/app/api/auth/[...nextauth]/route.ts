@@ -1,63 +1,81 @@
-import NextAuth from "next-auth";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/app/api/auth/[...nextauth]/route.ts
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-const handler = NextAuth({
-	// 🟢 Session ต้องเป็น jwt เท่านั้นเมื่อมีการใช้ Credentials (Login ปกติ)
+export const authOptions: NextAuthOptions = {
+	adapter: PrismaAdapter(prisma),
+
+	// 🟢 1. ขยายบล็อก session เพื่อใส่ maxAge (Session Timeout)
 	session: {
 		strategy: "jwt",
+		maxAge: 30 * 60, // ⏳ ตั้งค่าให้ออกจากระบบอัตโนมัติใน 30 นาที (ถ้าอยาก 24 ชม. * 60 นาที * 60 วินาที)
 	},
+
 	providers: [
-		// 1. ระบบ Google Login
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID as string,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
 		}),
-
-		// 2. ระบบ Email / Password ปกติ
 		CredentialsProvider({
-			name: "Email and Password",
+			name: "Credentials",
 			credentials: {
-				email: { label: "Email", type: "email", placeholder: "you@example.com" },
+				email: { label: "Email", type: "email" },
 				password: { label: "Password", type: "password" }
 			},
-			// ฟังก์ชัน authorize จะถูกเรียกตอนผู้ใช้กดปุ่ม Login
 			async authorize(credentials) {
 				if (!credentials?.email || !credentials?.password) {
-					throw new Error("กรุณากรอกอีเมลและรหัสผ่าน");
+					throw new Error("Please enter both email and password");
 				}
-
-				// 🚧 ตรงนี้คือจุดที่เราจะเอาไว้เขียนเช็คกับ Database จริงๆ (Prisma) ใน Module 2
-				// ตอนนี้ผมทำ Mockup "บัญชีแอดมินจำลอง" ให้คุณเทสระบบไปก่อนครับ
-				if (credentials.email === "admin@devakorn.com" && credentials.password === "123456") {
-					// ถ้าล็อกอินผ่าน ให้ส่งข้อมูล User กลับไป
-					return {
-						id: "999",
-						name: "Kidakorn (Admin)",
-						email: "admin@devakorn.com",
-						image: "https://ui-avatars.com/api/?name=Admin&background=random"
-					};
+				const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+				if (!user || !user.password) {
+					throw new Error("Invalid email or password");
 				}
-
-				// ถ้าอีเมลหรือรหัสไม่ตรง
-				return null;
+				const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+				if (!isPasswordValid) {
+					throw new Error("Invalid email or password");
+				}
+				return {
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					image: user.image,
+					role: user.role,
+					coinBalance: user.coinBalance,
+				} as any;
 			}
 		})
 	],
+
 	callbacks: {
+		async jwt({ token, user, trigger, session }) {
+			if (user) {
+				token.role = (user as any).role;
+				token.coinBalance = (user as any).coinBalance;
+			}
+
+			if (trigger === "update" && session?.coinBalance !== undefined) {
+				token.coinBalance = session.coinBalance;
+			}
+
+			return token;
+		},
 		async session({ session, token }) {
-			if (session?.user) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(session.user as any).id = token.sub;
+			if (session.user) {
+				(session.user as any).role = token.role;
+				(session.user as any).coinBalance = token.coinBalance;
 			}
 			return session;
-		},
+		}
 	},
-	// 🟢 เพิ่มโค้ดบล็อกนี้เข้าไป เพื่อบอกว่าหน้า Login เราอยู่ที่ /login
-	pages: {
-		signIn: '/login',
-	},
-	secret: process.env.NEXTAUTH_SECRET,
-});
 
+	pages: { signIn: "/login" },
+	secret: process.env.NEXTAUTH_SECRET,
+};
+
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

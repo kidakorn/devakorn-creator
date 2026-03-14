@@ -2,38 +2,46 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from "next-auth/react";
+import {
+	Video,
+	Download,
+	Share2,
+	RefreshCw,
+	Play,
+	Monitor,
+	Clapperboard
+} from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const categories = [
-	'Product Commercial',
-	'Cinematic Trailer',
-	'Animation',
-	'Social Media Reel',
-	'Documentary',
-	'Other'
+	'Product Showcase',
+	'TikTok / Reels Ad',
+	'Cinematic Promo',
+	'Stop Motion',
+	'3D Product Reveal',
+	'B-Roll Footage'
 ];
 
 export default function VideoCreatorPage() {
+	const { data: session, update } = useSession();
 	const [prompt, setPrompt] = useState('');
-	const [selectedCategory, setSelectedCategory] = useState('Product Commercial');
+	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [videoBlobData, setVideoBlobData] = useState<Blob | null>(null);
+	const [isDownloading, setIsDownloading] = useState(false);
+	const isButtonDisabled = isGenerating || !prompt || (session?.user?.coinBalance ?? 0) < 400;
 
 	const handleGenerate = async () => {
-		if (!prompt) {
-			setError('Please describe your video scene.');
-			return;
-		}
+		// 🟢 1. กลับมาใช้ Alert แจ้งเตือน
+		if (!prompt) return alert("Please describe your video scene.");
 
 		setIsGenerating(true);
-		setError(null);
 		setVideoUrl(null);
 
 		try {
-			const response = await fetch('http://localhost:5000/api/video/generate', {
+			const response = await fetch('/api/generate/video', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -45,116 +53,122 @@ export default function VideoCreatorPage() {
 
 			const data = await response.json();
 
-			if (!response.ok) {
-				throw new Error(data.message || 'Failed to generate video.');
-			}
+			if (response.ok) {
+				// 🟢 2. รองรับทั้ง Cloudinary URL และ Base64
+				const finalUrl = data.videoUrl || (data.videoBase64 ? `data:video/mp4;base64,${data.videoBase64}` : null);
 
-			if (data.videoBase64) {
-				// วิธีถอดรหัส Base64 เป็น Blob ที่เสถียรสำหรับเบราว์เซอร์
-				const base64Link = `data:video/mp4;base64,${data.videoBase64}`;
-				const fetchRes = await fetch(base64Link);
-				const videoBlob = await fetchRes.blob();
+				if (finalUrl) {
+					setVideoUrl(finalUrl);
+					setPrompt('');
 
-				const videoObjectUrl = URL.createObjectURL(videoBlob);
-				setVideoUrl(videoObjectUrl);
-
-				console.log("✅ วิดีโอพร้อมเล่นแล้ว! ขนาดไฟล์จริง:", (videoBlob.size / 1024 / 1024).toFixed(2), "MB");
-
-				setVideoBlobData(videoBlob);
-				setPrompt('');
+					if (data.remainingCoins !== undefined) {
+						await update({ coinBalance: data.remainingCoins });
+					}
+				}
+			} else {
+				// 🟢 3. Alert เมื่อเกิด Error จาก API
+				alert(data.message || "Failed to generate video.");
 			}
 
 		} catch (err: any) {
-			setError(err.message || 'Failed to generate video.');
 			console.error("Frontend Error:", err);
+			alert("Cannot connect to the server. Please try again later.");
 		} finally {
 			setIsGenerating(false);
 		}
 	};
 
-	const handleShare = async () => {
-		if (!videoBlobData) return;
+	// 🟢 4. ฟังก์ชันดาวน์โหลดแบบใหม่ (รองรับ Cloudinary URL)
+	const handleDownload = async () => {
+		if (!videoUrl) return;
+		setIsDownloading(true);
 
-		// เช็คว่าเบราว์เซอร์รองรับการแชร์ไฟล์ไหม (ส่วนใหญ่บนมือถือและ Chrome รุ่นใหม่รองรับ)
-		if (navigator.canShare && navigator.canShare({ files: [new File([videoBlobData], 'video.mp4', { type: 'video/mp4' })] })) {
-			try {
-				const file = new File([videoBlobData], `Devakorn_${Date.now()}.mp4`, { type: 'video/mp4' });
+		try {
+			const response = await fetch(videoUrl);
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `Devakorn_Ad_${Date.now()}.mp4`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Download error:", error);
+			alert("Failed to download video.");
+		} finally {
+			setIsDownloading(false);
+		}
+	};
+
+	const handleShare = async () => {
+		if (!videoUrl) return;
+		try {
+			const response = await fetch(videoUrl);
+			const blob = await response.blob();
+			const file = new File([blob], `Devakorn_${Date.now()}.mp4`, { type: 'video/mp4' });
+
+			if (navigator.canShare && navigator.canShare({ files: [file] })) {
 				await navigator.share({
 					title: 'สร้างสรรค์ด้วย DEVAKORN Creator AI',
-					text: 'ลองดูวิดีโอ AI สุดล้ำที่ฉันเพิ่งสร้างสิ!',
-					files: [file], // 🟢 ส่งตัวไฟล์วิดีโอไปตรงๆ เลย
+					text: 'ลองดูวิดีโอโฆษณาสินค้า 30 วินาทีที่ฉันเพิ่งสร้างสิ!',
+					files: [file],
 				});
-				console.log('✅ แชร์สำเร็จ!');
-			} catch (error) {
-				console.log('❌ ยกเลิกการแชร์ หรือแชร์ไม่สำเร็จ', error);
+			} else {
+				alert('เบราว์เซอร์ของคุณไม่รองรับการแชร์ไฟล์โดยตรง กรุณากดดาวน์โหลดแทนครับ');
 			}
-		} else {
-			alert('เบราว์เซอร์ของคุณไม่รองรับการแชร์ไฟล์โดยตรง กรุณากดดาวน์โหลดแทนครับ');
+		} catch (error) {
+			console.log('Error sharing:', error);
 		}
 	};
 
 	return (
 		<DashboardLayout>
 			<div className="min-h-screen bg-[#f8f9fa] p-8">
-				{/* Header Section */}
-				<div className="mb-8 flex justify-between items-end">
-					<div>
-						<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2 tracking-tight">
-							Video Creator
-						</h1>
-						<p className="text-gray-500 mt-2 text-sm">
-							Bring your ideas to life with high-fidelity AI video generation.
-						</p>
-					</div>
+				<div className="mb-8">
+					<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
+						<Clapperboard className="w-8 h-8 text-red-600" />
+						Video Ad Creator
+					</h1>
+					<p className="text-gray-500 mt-2 text-sm font-medium">
+						Generate high-converting commercial video assets for your products.
+					</p>
 				</div>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-					{/* 🎛️ ฝั่งซ้าย: Input Controls */}
-					<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-						<h2 className="text-lg font-bold text-gray-800 mb-6">Your Concept</h2>
-
-						<div className="mb-8">
-							<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-								<span className="text-red-500">📐</span> Aspect Ratio
+					{/* Left Panel */}
+					<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 space-y-8">
+						<div>
+							<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
+								<Monitor className="w-4 h-4 text-red-600" /> Platform Format
 							</label>
 							<div className="flex gap-4">
 								<button
 									onClick={() => setAspectRatio('16:9')}
-									className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9'
-										? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
-										: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-										}`}
+									className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
 								>
-									<div className="w-6 h-3.5 border-2 border-current rounded-sm"></div>
-									16:9 (Landscape)
+									YouTube (16:9)
 								</button>
-
 								<button
 									onClick={() => setAspectRatio('9:16')}
-									className={`flex items-center gap-3 px-5 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16'
-										? 'bg-red-50 text-red-600 border-red-300 shadow-sm'
-										: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-										}`}
+									className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
 								>
-									<div className="w-3.5 h-6 border-2 border-current rounded-sm"></div>
-									9:16 (Portrait)
+									TikTok / IG (9:16)
 								</button>
 							</div>
 						</div>
 
-						<div className="mb-8">
-							<label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-								<span className="text-red-500">🏷️</span> Video Style Category
+						<div>
+							<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
+								<Video className="w-4 h-4 text-red-600" /> Ad Style Category
 							</label>
 							<div className="flex flex-wrap gap-2">
 								{categories.map((cat) => (
 									<button
 										key={cat}
 										onClick={() => setSelectedCategory(cat)}
-										className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${selectedCategory === cat
-											? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-200'
-											: 'bg-white text-gray-600 border-gray-200 hover:border-red-300 hover:bg-red-50'
-											}`}
+										className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${selectedCategory === cat ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-red-300 hover:bg-red-50'}`}
 									>
 										{cat}
 									</button>
@@ -162,97 +176,76 @@ export default function VideoCreatorPage() {
 							</div>
 						</div>
 
-						<div className="mb-8">
-							<label className="block text-sm font-semibold text-gray-700 mb-2">
-								Scene Description
-							</label>
+						<div>
+							<label className="block text-sm font-bold text-gray-700 mb-2">Product & Scene Description</label>
 							<textarea
 								rows={5}
-								className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none transition-all"
-								placeholder="e.g., A cinematic shot of a flying Thai Tuk-Tuk hovering above a neon-lit cyberpunk city, glowing wheels..."
+								className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none resize-none transition-all"
+								placeholder="Describe your product scene..."
 								value={prompt}
 								onChange={(e) => setPrompt(e.target.value)}
 							/>
 						</div>
 
-						{error && (
-							<div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6 border border-red-100">
-								{error}
-							</div>
-						)}
-
 						<button
 							onClick={handleGenerate}
-							disabled={isGenerating}
-							className={`w-full py-3.5 rounded-xl font-bold text-white transition-all duration-300 flex justify-center items-center gap-2 ${isGenerating
-								? 'bg-gray-400 cursor-not-allowed'
-								: 'bg-[#1e1e2d] hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5'
+							disabled={isButtonDisabled} // 🟢 ล็อคปุ่มจริงที่นี่
+							className={`w-full py-4 rounded-xl font-bold text-white transition-all flex justify-center items-center gap-2 ${isButtonDisabled
+									? 'bg-gray-300 cursor-not-allowed opacity-60' // 🟢 แสดงผลสีเทาและเมาส์เป็นรูปห้ามกด
+									: 'bg-[#1e1e2d] hover:bg-gray-800 shadow-lg active:scale-95'
 								}`}
 						>
 							{isGenerating ? (
 								<>
-									<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									<RefreshCw className="w-5 h-5 animate-spin" />
 									Rendering Video...
 								</>
+							) : (session?.user?.coinBalance ?? 0) < 400 ? (
+								'Insufficient Coins (400 Coins)'
 							) : (
-								'Generate Video'
+								<>
+									<Play className="w-5 h-5 fill-current" />
+									Generate Video Ad (-400 Coins)
+								</>
 							)}
 						</button>
 					</div>
 
-					{/* 📺 ฝั่งขวา: Video Result */}
+					{/* Right Panel */}
 					<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col">
-						<h2 className="text-lg font-bold text-gray-800 mb-6 flex justify-between items-center">
-							Generated Result
-						</h2>
-
-						<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-75">
+						<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-100">
 							{isGenerating ? (
-								<div className="flex flex-col items-center animate-pulse">
-									<div className="w-14 h-14 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin mb-4 shadow-lg"></div>
-									<p className="text-gray-600 font-semibold">Creating your masterpiece...</p>
-									<p className="text-xs text-gray-400 mt-2">This may take a minute</p>
+								<div className="flex flex-col items-center">
+									<div className="w-14 h-14 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin mb-4"></div>
+									<p className="text-gray-600 font-bold">Directing your commercial...</p>
+									<p className="text-xs text-gray-400 mt-2 font-medium">Veo 3.1 is processing (1-3 mins)</p>
 								</div>
 							) : videoUrl ? (
-								<video
-									key={videoUrl}
-									src={videoUrl}
-									controls
-									autoPlay
-									muted
-									loop
-									playsInline
-									className="w-full h-full object-contain bg-black rounded-lg shadow-sm"
-								>
-									Your browser does not support the video tag.
-								</video>
+								<video key={videoUrl} src={videoUrl} controls autoPlay muted loop className="w-full h-full object-contain bg-black rounded-lg" />
 							) : (
-								<div className="text-center">
-									<span className="text-4xl block mb-3 opacity-20">🎥</span>
-									<p className="text-gray-400 font-medium text-sm">Ready to create your next video.</p>
+								<div className="text-center opacity-30">
+									<Play className="w-16 h-16 mx-auto mb-4" />
+									<p className="font-bold">Ready to produce your next ad.</p>
 								</div>
 							)}
 						</div>
 
 						{videoUrl && !isGenerating && (
-							<div className="mt-6 flex gap-4"> {/* 🟢 ใช้ flex gap-4 เพื่อจัดปุ่มให้อยู่ข้างกัน */}
-								{/* ปุ่มดาวน์โหลดเดิม */}
-								<a
-									href={videoUrl}
-									download={`Devakorn_Video_${Date.now()}.mp4`}
-									className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors flex justify-center items-center gap-2 cursor-pointer"
+							<div className="mt-6 flex gap-4">
+								<button
+									onClick={handleDownload}
+									disabled={isDownloading}
+									className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-4 rounded-xl font-bold hover:bg-gray-100 transition-all flex justify-center items-center gap-2"
 								>
-									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+									{isDownloading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
 									Download
-								</a>
-
-								{/* 🟢 ปุ่ม Share ใหม่ */}
+								</button>
 								<button
 									onClick={handleShare}
-									className="flex-1 bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166FE5] transition-colors flex justify-center items-center gap-2 shadow-sm"
+									className="flex-1 bg-[#1877F2] text-white py-4 rounded-xl font-bold hover:bg-[#166FE5] transition-all flex justify-center items-center gap-2 shadow-sm"
 								>
-									<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
-									Share Video
+									<Share2 className="w-5 h-5" />
+									Share
 								</button>
 							</div>
 						)}

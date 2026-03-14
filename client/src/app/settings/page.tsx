@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react"; // 🟢 ดึงระบบเช็ค Session ของฝั่ง Client
+import { useRouter } from "next/navigation"; // 🟢 ดึงระบบเปลี่ยนหน้า
 import {
 	Key,
 	User,
@@ -13,21 +16,36 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function Settings() {
+	// 🟢 1. เรียกใช้งานสายสืบตรวจสิทธิ์
+	const { data: session, status } = useSession();
+	const router = useRouter();
+
 	const [apiKey, setApiKey] = useState("AIzaSyB***************************");
 	const [isSaving, setIsSaving] = useState(false);
 
+	// 🟢 2. ดักจับคนเข้าหน้าเว็บ
+	useEffect(() => {
+		if (status === "unauthenticated") {
+			router.push("/login"); // ยังไม่ล็อกอิน เตะไปหน้า Login
+		} else if (status === "authenticated" && (session?.user as any)?.role !== "ADMIN") {
+			router.push("/"); // ล็อกอินแล้ว แต่ไม่ใช่ ADMIN เตะไปหน้าหลัก
+		}
+	}, [status, session, router]);
+
 	const handleSave = () => {
 		setIsSaving(true);
-		// จำลองการบันทึกข้อมูล
 		setTimeout(() => setIsSaving(false), 1500);
 	};
 
-	// 🟢 สังเกตว่าเราไม่ต้องมี <div className="min-h-screen"> หรือ <main> ครอบแล้ว 
-	// เริ่มที่ container เนื้อหาได้เลย เพราะ DashboardLayout จัดการให้แล้วครับ
+	// 🟢 3. ระหว่างกำลังเช็คสิทธิ์ ให้โชว์หน้าจอดำๆ หรือ Loading ไปก่อนเพื่อความเนียน
+	if (status === "loading" || (session?.user as any)?.role !== "ADMIN") {
+		return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+	}
+
 	return (
 		<DashboardLayout>
 			<div className="max-w-4xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
-
+				{/* โค้ด UI ของคุณทั้งหมดเหมือนเดิมเป๊ะครับ... */}
 				{/* --- Header --- */}
 				<div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
 					<div>

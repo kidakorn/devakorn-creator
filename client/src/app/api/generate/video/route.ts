@@ -1,0 +1,148 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/lib/prisma";
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const { GoogleGenAI } = require('@google/genai');
+const { Storage } = require('@google-cloud/storage');
+
+export async function POST(req: Request) {
+	try {
+		// 1. ตรวจสอบสิทธิ์ผู้ใช้
+		const session = await getServerSession(authOptions);
+		if (!session || !session.user?.email) {
+			return NextResponse.json({ status: "error", message: "Unauthorized. Please log in." }, { status: 401 });
+		}
+
+		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+		if (!user) return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
+
+		// 2. กำหนดราคาวิดีโอ (400 Coins)
+		const COST_PER_VIDEO = 400;
+		if (user.coinBalance < COST_PER_VIDEO) {
+			return NextResponse.json({
+				status: "error",
+				message: `Premium feature! Not enough coins. You need ${COST_PER_VIDEO} coins to produce a video ad.`
+			}, { status: 403 });
+		}
+
+		// 3. รับข้อมูลจากหน้าเว็บ
+		const { prompt, category, aspectRatio } = await req.json();
+		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
+
+		const finalPrompt = `Commercial Video Style: ${category}. High-quality product showcase, sharp focus, cinematic lighting. ${prompt}`;
+
+		// 4. เชื่อมต่อ Veo AI 
+		const client = new GoogleGenAI({ vertexai: true, project: 'devakorn-creator-ai', location: 'us-central1' });
+		const storage = new Storage();
+
+		console.log("🎬 [1/3] Submitting video job to Veo AI...");
+		let operation = await client.models.generateVideos({
+			model: 'veo-3.1-generate-001',
+			prompt: finalPrompt,
+			config: { aspectRatio: aspectRatio || "16:9" }
+		});
+
+		console.log(`🎫 [2/3] Got Ticket: ${operation.name}`);
+		console.log("⏳ Waiting for AI to render (approx 1-3 mins)...");
+
+		// วนลูปเช็คสถานะ
+		while (!operation.done) {
+			await new Promise(resolve => setTimeout(resolve, 15000));
+			operation = await client.operations.get({ operation: operation });
+			console.log("🔄 Still rendering... checking again in 15 seconds.");
+		}
+		console.log("✅ [3/3] Video generation complete!");
+
+		// 5. ดึงข้อมูลวิดีโอออกมา
+		let videoBase64 = null;
+		const videoData = operation.response?.generatedVideos?.[0]?.video;
+
+		if (!videoData) throw new Error("No video data received from AI.");
+
+		if (videoData.videoBytes) {
+			if (typeof videoData.videoBytes === 'string') {
+				videoBase64 = videoData.videoBytes;
+			} else {
+				videoBase64 = Buffer.from(videoData.videoBytes).toString('base64');
+			}
+		} else if (videoData.uri && videoData.uri.startsWith('gs://')) {
+			const bucketName = videoData.uri.split('/')[2];
+			const fileName = videoData.uri.split('/').slice(3).join('/');
+			const [fileContents] = await storage.bucket(bucketName).file(fileName).download();
+			videoBase64 = fileContents.toString('base64');
+		}
+
+		if (!videoBase64) throw new Error("Could not process the video data.");
+
+		// 🟢 6. อัปโหลดขึ้น Cloudinary ก่อนหักเหรียญ!
+		console.log("☁️ Uploading to Cloudinary...");
+		const uploadResponse = await cloudinary.uploader.upload(
+			`data:video/mp4;base64,${videoBase64}`,
+			{
+				folder: "devakorn-ai-creator/videos",
+				resource_type: "video"
+			}
+		);
+
+		// 🛡️ 7. เริ่มระบบ Transaction (หักเหรียญ + เซฟผลงาน + จดบัญชี)
+		console.log("💾 Saving to Database & Deducting Coins...");
+		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
+
+			// 7.1 หักเหรียญ
+			prisma.user.update({
+				where: { id: user.id },
+				data: { coinBalance: { decrement: COST_PER_VIDEO } }
+			}),
+
+			// 7.2 บันทึกลิงก์วิดีโอ
+			prisma.generatedAsset.create({
+				data: {
+					userId: user.id,
+					type: "VIDEO",
+					prompt: finalPrompt,
+					category: category || "None",
+					outputUrl: uploadResponse.secure_url,
+					aspectRatio: aspectRatio || "16:9"
+				}
+			}),
+
+			// 7.3 จดบันทึกสมุดบัญชี (Ledger)
+			prisma.transaction.create({
+				data: {
+					userId: user.id,
+					type: 'SPEND_VIDEO',
+					amount: -COST_PER_VIDEO,
+					balanceAfter: user.coinBalance - COST_PER_VIDEO,
+					description: `Generated Video (${aspectRatio}): ${finalPrompt.substring(0, 30)}...`,
+					status: 'COMPLETED',
+				}
+			})
+		]);
+
+		// 📤 8. ส่งข้อมูลกลับหน้าบ้าน
+		return NextResponse.json({
+			status: "success",
+			videoUrl: uploadResponse.secure_url,
+			video: videoBase64,
+			remainingCoins: updatedUser.coinBalance
+		});
+
+	} catch (error: any) {
+		console.error("❌ Error generating video:", error.message || error);
+		return NextResponse.json({
+			status: 'error',
+			message: "Failed to generate video. AI might be busy. Coins not deducted."
+		}, { status: 500 });
+	}
+}

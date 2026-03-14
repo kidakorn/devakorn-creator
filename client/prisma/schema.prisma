@@ -8,17 +8,107 @@ datasource db {
   provider = "postgresql"
 }
 
-// 📦 พิมพ์เขียวตาราง User
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// --- ตาราง User ของเรา (เพิ่มการเชื่อมโยงกับ NextAuth) ---
 model User {
-  id       String  @id @default(cuid())
-  name     String?
-  email    String  @unique
-  password String?
-  image    String?
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  coinBalance   Int       @default(50)
 
-  // 💰 ระบบกระเป๋าเงิน (Coin)
-  coinBalance Int @default(100) // สมัครปุ๊บ แถมให้ลองเล่นก่อน 100 เหรียญ
+  // 🟢 2. เพิ่มช่องสิทธิ์ และตั้งค่าเริ่มต้นให้ทุกคนที่สมัครใหม่เป็นแค่ USER
+  role Role @default(USER)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  accounts  Account[]
+  sessions  Session[]
+
+  transactions    Transaction[]
+  generatedAssets GeneratedAsset[]
+}
+
+model GeneratedAsset {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // "IMAGE", "VIDEO", หรือ "PROMPT"
+  prompt      String   @db.Text
+  category    String?
+  outputUrl   String   @db.Text // เก็บ Base64 (ตอนนี้) หรือ URL (อนาคต)
+  aspectRatio String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum TransactionType {
+  TOPUP // เติมเงินซื้อเหรียญ
+  SPEND_IMAGE // ใช้เหรียญเจนรูป
+  SPEND_VIDEO // ใช้เหรียญเจนวิดีโอ
+  SPEND_PROMPT // ใช้เหรียญเจน prompt
+  REFUND // คืนเหรียญ (กรณีระบบพัง)
+}
+
+enum TransactionStatus {
+  PENDING // รอดำเนินการ (เช่น รอธนาคารยืนยัน)
+  COMPLETED // สำเร็จ (เหรียญเข้า/ออก เรียบร้อย)
+  FAILED // ล้มเหลว (ตัดเงินไม่ผ่าน)
+  CANCELLED // ยกเลิก
+}
+
+// 🟢 สร้างตารางสมุดบัญชี (Ledger)
+model Transaction {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         TransactionType
+  amount       Int // จำนวนเหรียญ (บวก หรือ ลบ)
+  balanceAfter Int // ยอดคงเหลือหลังจากทำรายการ (เพื่อการตรวจสอบย้อนหลัง)
+  description  String? // รายละเอียด เช่น "Generate 1 Image", "Top-up Starter Pack"
+  referenceId  String?           @unique // รหัสบิลอ้างอิงจาก Payment Gateway (Stripe/Omise) ป้องกันการส่งบิลซ้ำ
+  status       TransactionStatus @default(COMPLETED)
+  createdAt    DateTime          @default(now())
 }

@@ -1,16 +1,21 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState } from "react";
-import { Wand2, Sparkles, Copy, CheckCircle2, Tags } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
+// 🟢 เปลี่ยนหมวดหมู่ให้เป็น "ประเภทสินค้า" ทั้งหมด
 const CATEGORIES = [
-	"Auto", "Photography", "Cinematic", "3D Render", "Anime", "Cyberpunk", "Watercolor", "Minimalist"
+	"Product Photography", "T-Shirt Design", "Sticker & Die-cut",
+	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon", "Product Mockup"
 ];
 
 export default function PromptEnhancerPage() {
+	const { data: session, update } = useSession();
 	const [idea, setIdea] = useState("");
-	const [selectedCategory, setSelectedCategory] = useState("Auto"); // เก็บค่า Style ปัจจุบัน
+	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
@@ -22,10 +27,9 @@ export default function PromptEnhancerPage() {
 		setIsCopied(false);
 
 		try {
-			const response = await fetch('http://localhost:5000/api/generate/enhance-prompt', {
+			const response = await fetch('/api/generate/enhance-prompt', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				// 🟢 ส่งค่าหมวดหมู่ไปให้ Backend ด้วย
 				body: JSON.stringify({ idea, category: selectedCategory }),
 			});
 
@@ -33,6 +37,9 @@ export default function PromptEnhancerPage() {
 
 			if (response.ok && data.status === 'success') {
 				setEnhancedPrompt(data.prompt);
+				if (data.remainingCoins !== undefined) {
+					await update({ coinBalance: data.remainingCoins });
+				}
 			} else {
 				alert("Error: " + data.message);
 			}
@@ -54,33 +61,30 @@ export default function PromptEnhancerPage() {
 	return (
 		<DashboardLayout>
 			<div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
-
 				{/* Title Section */}
 				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
 					<div>
 						<h1 className="text-2xl font-black text-dark-bg tracking-tight flex items-center gap-2">
-							<Wand2 className="w-6 h-6 text-primary-red" />
-							AI Prompt Magic
+							<PackageOpen className="w-6 h-6 text-primary-red" />
+							Product Prompt Magic
 						</h1>
-						<p className="text-text-main/60 text-sm mt-1 font-medium">Turn your simple ideas into professional, high-fidelity image prompts.</p>
+						<p className="text-text-main/60 text-sm mt-1 font-medium">Turn simple ideas into highly-converting commercial product designs.</p>
 					</div>
 				</div>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
 					{/* Left Side: Input Form */}
 					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
 						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20">
-							<h2 className="text-lg font-bold text-dark-bg">Your Concept</h2>
-							<p className="text-xs text-text-main/50 font-medium">Define your core idea and artistic direction.</p>
+							<h2 className="text-lg font-bold text-dark-bg">What are you selling?</h2>
+							<p className="text-xs text-text-main/50 font-medium">Define your product idea and asset type.</p>
 						</div>
 
 						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-6">
-
-							{/* 🟢 Category Selection Tags */}
+							{/* Category Selection Tags */}
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Tags className="w-4 h-4 text-primary-red" /> Style Category
+									<Tags className="w-4 h-4 text-primary-red" /> Product Type
 								</label>
 								<div className="flex flex-wrap gap-2">
 									{CATEGORIES.map((cat) => (
@@ -104,7 +108,7 @@ export default function PromptEnhancerPage() {
 									rows={4}
 									value={idea}
 									onChange={(e) => setIdea(e.target.value)}
-									placeholder="e.g., A bulldog riding a futuristic motorcycle..."
+									placeholder="e.g., A luxury perfume bottle with floral scent..."
 									className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
 								/>
 							</div>
@@ -117,12 +121,12 @@ export default function PromptEnhancerPage() {
 								{isEnhancing ? (
 									<>
 										<Sparkles className="w-4 h-4 animate-spin" />
-										Generating Magic...
+										Designing Product...
 									</>
 								) : (
 									<>
 										<Wand2 className="w-4 h-4" />
-										Enhance Prompt
+										Enhance Prompt (-2 Coins)
 									</>
 								)}
 							</button>
@@ -133,10 +137,9 @@ export default function PromptEnhancerPage() {
 					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col relative group">
 						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex justify-between items-center">
 							<div>
-								<h2 className="text-lg font-bold text-dark-bg">Enhanced Result</h2>
-								<p className="text-xs text-text-main/50 font-medium">Ready to use in Image Studio</p>
+								<h2 className="text-lg font-bold text-dark-bg">Ready to Generate</h2>
+								<p className="text-xs text-text-main/50 font-medium">Copy this to Image Studio</p>
 							</div>
-							{/* Copy Button */}
 							{enhancedPrompt && (
 								<button
 									onClick={copyToClipboard}
@@ -153,7 +156,7 @@ export default function PromptEnhancerPage() {
 							{isEnhancing ? (
 								<div className="absolute inset-0 flex flex-col items-center justify-center text-primary-red animate-pulse">
 									<Sparkles className="w-10 h-10 mb-2" />
-									<p className="text-sm font-bold text-dark-bg">Brainstorming details...</p>
+									<p className="text-sm font-bold text-dark-bg">Adding commercial details...</p>
 								</div>
 							) : enhancedPrompt ? (
 								<div className="h-full">
@@ -163,13 +166,12 @@ export default function PromptEnhancerPage() {
 								</div>
 							) : (
 								<div className="absolute inset-0 flex flex-col items-center justify-center text-text-main/30">
-									<Wand2 className="w-10 h-10 mb-3 opacity-50" />
-									<p className="text-sm font-medium">The magic result will appear here.</p>
+									<PackageOpen className="w-10 h-10 mb-3 opacity-50" />
+									<p className="text-sm font-medium">Your commercial prompt will appear here.</p>
 								</div>
 							)}
 						</div>
 					</section>
-
 				</div>
 			</div>
 		</DashboardLayout>

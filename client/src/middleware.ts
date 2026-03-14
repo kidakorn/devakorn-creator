@@ -1,15 +1,9 @@
-import { withAuth } from "next-auth/middleware";
+export { default } from "next-auth/middleware";
 
-export default withAuth({
-	pages: {
-		signIn: "/login", // ถ้ายังไม่ล็อกอิน ให้เด้งไปหน้า /login
-	},
-});
-
-// กำหนดว่าจะให้ยามเฝ้าหน้าไหนบ้าง
 export const config = {
-	// บังคับล็อกอินทุกหน้า ยกเว้นหน้า /login และ api 
-	matcher: [
-		"/((?!login|api|_next/static|_next/image|favicon.ico).*)",
-	],
+  // 🟢 matcher คือการกำหนดว่าหน้าไหน "ต้องล็อกอิน" ถึงจะเข้าได้บ้าง
+  // โค้ดด้านล่างนี้หมายถึง: "ล็อคทุกหน้า ยกเว้นหน้า /login, /register, /api และไฟล์ระบบพื้นฐาน"
+  matcher: [
+    "/((?!login|register|api|_next/static|_next/image|favicon.ico).*)"
+  ],
 };
