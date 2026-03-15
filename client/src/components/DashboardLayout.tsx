@@ -1,36 +1,56 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Footer from "./Footer";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-	// สร้าง State สำหรับเปิด/ปิด Sidebar (ค่าเริ่มต้นคือ true = เปิด)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-	// ฟังก์ชันสำหรับสลับสถานะ
+	// 🟢 1. สร้าง State เช็คว่าระบบอ่านความจำเสร็จหรือยัง
+	const [isMounted, setIsMounted] = useState(false);
+
+	useEffect(() => {
+		const savedState = localStorage.getItem("devakorn_sidebar_state");
+
+		if (savedState !== null) {
+			setIsSidebarOpen(savedState === "true");
+		} else {
+			setIsSidebarOpen(window.innerWidth > 768);
+		}
+
+		// 🟢 2. อ่านความจำเสร็จแล้ว อนุญาตให้แสดงผลได้!
+		setIsMounted(true);
+	}, []);
+
 	const toggleSidebar = () => {
-		setIsSidebarOpen(!isSidebarOpen);
+		setIsSidebarOpen((prev) => {
+			const newState = !prev;
+			localStorage.setItem("devakorn_sidebar_state", String(newState));
+			return newState;
+		});
 	};
+
+	// 🟢 3. เบรกระบบ: ถ้ายังอ่านไม่เสร็จ ให้โชว์พื้นหลังเปล่าๆ ไปก่อน (เสี้ยววินาที) ป้องกันการกระตุกกางออก
+	if (!isMounted) {
+		return <div className="min-h-screen bg-[#F8F9FA]"></div>;
+	}
 
 	return (
 		<div className="min-h-screen bg-[#F8F9FA] text-text-main flex font-sans overflow-hidden">
-			{/* ส่งสถานะไปบอก Sidebar ว่าให้กางหรือหุบ */}
 			<Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
 			<div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-				{/* ส่งฟังก์ชันไปให้ปุ่ม Menu ใน Header กดใช้งาน */}
 				<Header toggleSidebar={toggleSidebar} />
 
-				{/* พื้นที่ Content หลัก (จะ Scroll ได้แค่ตรงนี้) */}
 				<main className="flex-1 overflow-y-auto p-4 md:p-8">
 					<div className="max-w-7xl mx-auto">
 						{children}
 					</div>
 				</main>
 
-				{/* Footer แปะไว้ล่างสุดของเนื้อหา */}
 				<Footer />
 			</div>
 		</div>

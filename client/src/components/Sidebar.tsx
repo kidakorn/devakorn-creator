@@ -1,29 +1,31 @@
 /* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react"; // 🟢 1. ดึง session มาเช็ค role
+import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
-	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon
+	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet // 🟢 เพิ่มไอคอน Wallet
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
 	const pathname = usePathname();
-	const { data: session } = useSession(); // 🟢 2. เรียกใช้ข้อมูล session
+	const { data: session } = useSession();
 
-	// 🟢 3. รายการเมนูพื้นฐาน (สำหรับทุกคน)
+	// 🟢 เพิ่มเมนู Wallet & Coins ให้คลิกจาก Sidebar ได้เลย
 	const navItems = [
 		{ name: "Overview", href: "/", icon: LayoutDashboard },
 		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
 		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
 		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
-		{ name: "Gallery", href: "/gallery", icon: ImageIcon }, // ✨ เพิ่ม Link Gallery
+		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
+		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet }, // ✨ เมนูใหม่!
 	];
 
-	// 🟢 4. เช็คว่าเป็น Admin หรือไม่ (อ้างอิงจากฟิลด์ role ใน Database ของคุณ)
-	const isAdmin = session?.user?.role === "ADMIN";
+	// 🟢 ใช้ (session?.user as any) เพื่อป้องกัน TypeScript โวยวายเรื่อง role 
+	const isAdmin = (session?.user as any)?.role === "ADMIN";
 
 	return (
 		<aside
@@ -71,20 +73,24 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 					);
 				})}
 
-				{/* 🟢 5. แสดงเมนู Settings เฉพาะ Admin เท่านั้น */}
+				{/* 🟢 แสดงเมนู Settings เฉพาะ Admin เท่านั้น */}
 				{isAdmin && (
-					<Link
-						href="/settings"
-						title={!isOpen ? "Settings" : undefined}
-						className={`flex items-center rounded-lg font-medium transition-all ${isOpen ? 'px-4 py-2.5 gap-3' : 'justify-center py-3'
-							} ${pathname === "/settings"
-								? "bg-primary-red/10 text-primary-red font-bold"
-								: "text-text-main/60 hover:bg-light-gray hover:text-dark-bg"
-							}`}
-					>
-						<SettingsIcon className="w-5 h-5 shrink-0" />
-						{isOpen && <span className="whitespace-nowrap">Settings</span>}
-					</Link>
+					<>
+						{/* เส้นคั่นบางๆ ก่อนเมนู Admin ให้ดูเป็นสัดส่วน */}
+						<div className="h-px bg-gray-300/50 my-4 mx-2"></div>
+						<Link
+							href="/settings"
+							title={!isOpen ? "Settings" : undefined}
+							className={`flex items-center rounded-lg font-medium transition-all ${isOpen ? 'px-4 py-2.5 gap-3' : 'justify-center py-3'
+								} ${pathname === "/settings"
+									? "bg-primary-red/10 text-primary-red font-bold"
+									: "text-text-main/60 hover:bg-light-gray hover:text-dark-bg"
+								}`}
+						>
+							<SettingsIcon className="w-5 h-5 shrink-0" />
+							{isOpen && <span className="whitespace-nowrap">Settings</span>}
+						</Link>
+					</>
 				)}
 			</nav>
 		</aside>
