@@ -7,7 +7,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
-	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck // 🟢 เพิ่มไอคอน ShieldCheck
+	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck, // 🟢 เพิ่มไอคอน ShieldCheck
+	User
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
@@ -21,6 +22,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
 		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet },
+		{ name: "My Profile", href: "/profile", icon: User },
 	];
 
 	// 🟢 เช็คสิทธิ์แอดมิน

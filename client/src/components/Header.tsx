@@ -6,20 +6,24 @@ import React from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, LogOut, Coins, Plus } from "lucide-react";
 import Link from "next/link";
-import useSWR from 'swr'; // 🟢 Import SWR
+import useSWR from 'swr';
 
-// 🟢 Define fetcher function
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 	const { data: session } = useSession();
 
-	// 🟢 Use SWR instead of useEffect/setInterval
-	// It will automatically share data with page.tsx and revalidate on focus
 	const { data } = useSWR('/api/user/balance', fetcher, {
-		refreshInterval: 10000, // Sync every 10 seconds
+		refreshInterval: 10000,
 		revalidateOnFocus: true
 	});
+
+	const imagePath = session?.user?.image;
+	const hasValidImage = typeof imagePath === 'string' && imagePath.trim() !== '' && imagePath !== 'null' && imagePath !== 'undefined';
+
+	const headerProfileImage = hasValidImage
+		? imagePath
+		: `https://ui-avatars.com/api/?name=${encodeURIComponent((session?.user as any)?.name || "User")}&background=FEE2E2&color=DC2626`;
 
 	const currentCoins = data?.coinBalance ?? 0;
 
@@ -53,11 +57,15 @@ export default function Header({ toggleSidebar }: { toggleSidebar: () => void })
 							<p className="text-xs text-gray-500 font-medium">{session.user.email}</p>
 						</div>
 
-						<img
-							src={session.user.image && session.user.image !== "null" ? session.user.image : `https://ui-avatars.com/api/?name=${encodeURIComponent((session.user as any).name || "User")}&background=FEE2E2&color=DC2626`}
-							alt="Profile"
-							className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 object-cover"
-						/>
+						{/* 🟢 ทำให้รูปโปรไฟล์กดลิงก์ไปหน้า /profile ได้ */}
+						<Link href="/profile" className="block hover:ring-2 hover:ring-red-500 rounded-full transition-all">
+							<img
+								src={headerProfileImage}
+								alt="Profile"
+								referrerPolicy="no-referrer" /* 🟢 ห้ามลืมบรรทัดนี้เด็ดขาด */
+								className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 object-cover"
+							/>
+						</Link>
 
 						<button
 							onClick={() => signOut({ callbackUrl: "/login" })}
