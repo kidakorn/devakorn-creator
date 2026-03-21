@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import useSWR from 'swr'; // 🟢 1. Import SWR
 import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -12,13 +13,25 @@ const CATEGORIES = [
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon", "Product Mockup"
 ];
 
+// 🟢 2. สร้าง fetcher สำหรับ SWR
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function PromptEnhancerPage() {
-	const { data: session, update } = useSession();
+	const { data: session } = useSession(); // 🟢 เอา update ออก เพราะเราใช้ SWR แทน
 	const [idea, setIdea] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
+
+	// 🟢 3. ใช้ SWR ดึงยอดเหรียญแบบ Real-time
+	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
+		refreshInterval: 10000,
+		revalidateOnFocus: true
+	});
+
+	// 🟢 ยอดเหรียญปัจจุบัน
+	const currentCoins = balanceData?.coinBalance ?? 0;
 
 	const handleMagic = async () => {
 		if (!idea) return;
@@ -37,8 +50,12 @@ export default function PromptEnhancerPage() {
 
 			if (response.ok && data.status === 'success') {
 				setEnhancedPrompt(data.prompt);
+
+				// 🟢 4. สั่งให้ SWR อัปเดตยอดเงินทันที
 				if (data.remainingCoins !== undefined) {
-					await update({ coinBalance: data.remainingCoins });
+					mutate({ coinBalance: data.remainingCoins }, false);
+				} else {
+					mutate();
 				}
 			} else {
 				alert("Error: " + data.message);
@@ -57,6 +74,9 @@ export default function PromptEnhancerPage() {
 		setIsCopied(true);
 		setTimeout(() => setIsCopied(false), 2000);
 	};
+
+	// 🟢 5. เพิ่มเช็คเหรียญไม่พอ
+	const isButtonDisabled = isEnhancing || !idea || currentCoins < 2;
 
 	return (
 		<DashboardLayout>
@@ -115,14 +135,19 @@ export default function PromptEnhancerPage() {
 
 							<button
 								onClick={handleMagic}
-								disabled={isEnhancing || !idea}
-								className="w-full bg-dark-bg hover:bg-primary-red text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:hover:bg-dark-bg shadow-sm mt-auto active:scale-95"
+								disabled={isButtonDisabled}
+								className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm mt-auto active:scale-95 ${isButtonDisabled
+										? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+										: 'bg-dark-bg hover:bg-primary-red text-white'
+									}`}
 							>
 								{isEnhancing ? (
 									<>
 										<Sparkles className="w-4 h-4 animate-spin" />
 										Designing Product...
 									</>
+								) : currentCoins < 2 ? (
+									'Insufficient Coins (2 Coins)'
 								) : (
 									<>
 										<Wand2 className="w-4 h-4" />

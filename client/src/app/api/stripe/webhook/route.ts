@@ -35,9 +35,10 @@ export async function POST(req: Request) {
 		if (event.type === "checkout.session.completed") {
 			const session = event.data.object as Stripe.Checkout.Session;
 
-			// Fetch customer email instead of ID
 			const userEmail = session.customer_details?.email || session.customer_email;
 			const amountTotal = session.amount_total ? session.amount_total / 100 : 0;
+			// 🟢 ใช้ session.id เป็นรหัสบิลอ้างอิง เพื่อป้องกันการรันซ้ำ
+			const referenceId = session.id;
 
 			console.log(`💰 Payment successful: ${amountTotal} THB | Email: ${userEmail || "No Email found"}`);
 
@@ -49,14 +50,28 @@ export async function POST(req: Request) {
 
 			if (userEmail && coinsToAdd > 0) {
 				try {
-					// Add coins to DB using user email
-					await prisma.user.update({
+					// 🟢 1. อัปเดตเหรียญให้ลูกค้า และดึงข้อมูล User ล่าสุดกลับมา
+					const updatedUser = await prisma.user.update({
 						where: { email: userEmail },
 						data: { coinBalance: { increment: coinsToAdd } },
 					});
-					console.log(`🎉 Success!! Added ${coinsToAdd} coins to Email: ${userEmail}`);
+
+					// 🟢 2. สร้างบันทึกประวัติ (Transaction History)
+					await prisma.transaction.create({
+						data: {
+							userId: updatedUser.id,
+							type: 'TOPUP', // ประเภทการเติมเงิน
+							amount: coinsToAdd, // จำนวนเหรียญที่ได้
+							balanceAfter: updatedUser.coinBalance, // ยอดคงเหลือล่าสุด
+							description: `Top-up: ${amountTotal} THB package`, // รายละเอียดบิล
+							referenceId: referenceId, // รหัสบิลอ้างอิงจาก Stripe
+							status: 'COMPLETED' // สถานะสำเร็จ
+						}
+					});
+
+					console.log(`🎉 Success!! Added ${coinsToAdd} coins and recorded transaction for Email: ${userEmail}`);
 				} catch (dbError) {
-					console.error("❌ Database error while adding coins:", dbError);
+					console.error("❌ Database error while adding coins/transaction:", dbError);
 				}
 			} else {
 				console.log("⚠️ Coins not added: Missing Email or price doesn't match packages");

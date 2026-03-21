@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState } from 'react';
 import { useSession } from "next-auth/react";
+import useSWR from 'swr'; // 🟢 1. Import SWR
 import {
 	Video,
 	Download,
@@ -23,18 +25,31 @@ const categories = [
 	'B-Roll Footage'
 ];
 
+// 🟢 2. สร้าง fetcher สำหรับ SWR
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function VideoCreatorPage() {
-	const { data: session, update } = useSession();
+	const { data: session } = useSession(); // เอา update ออก เพราะเราใช้ SWR แทน
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
 	const [isDownloading, setIsDownloading] = useState(false);
-	const isButtonDisabled = isGenerating || !prompt || (session?.user?.coinBalance ?? 0) < 400;
+
+	// 🟢 3. ใช้ SWR ดึงยอดเหรียญแบบ Real-time
+	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
+		refreshInterval: 10000,
+		revalidateOnFocus: true
+	});
+
+	// 🟢 ยอดเหรียญปัจจุบัน
+	const currentCoins = balanceData?.coinBalance ?? 0;
+
+	// 🟢 เปลี่ยนการเช็คเหรียญมาใช้ currentCoins
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 400;
 
 	const handleGenerate = async () => {
-		// 🟢 1. กลับมาใช้ Alert แจ้งเตือน
 		if (!prompt) return alert("Please describe your video scene.");
 
 		setIsGenerating(true);
@@ -54,19 +69,20 @@ export default function VideoCreatorPage() {
 			const data = await response.json();
 
 			if (response.ok) {
-				// 🟢 2. รองรับทั้ง Cloudinary URL และ Base64
 				const finalUrl = data.videoUrl || (data.videoBase64 ? `data:video/mp4;base64,${data.videoBase64}` : null);
 
 				if (finalUrl) {
 					setVideoUrl(finalUrl);
 					setPrompt('');
 
+					// 🟢 4. สั่งให้ SWR อัปเดตยอดเงินบนหน้าจอทันที
 					if (data.remainingCoins !== undefined) {
-						await update({ coinBalance: data.remainingCoins });
+						mutate({ coinBalance: data.remainingCoins }, false);
+					} else {
+						mutate();
 					}
 				}
 			} else {
-				// 🟢 3. Alert เมื่อเกิด Error จาก API
 				alert(data.message || "Failed to generate video.");
 			}
 
@@ -78,7 +94,6 @@ export default function VideoCreatorPage() {
 		}
 	};
 
-	// 🟢 4. ฟังก์ชันดาวน์โหลดแบบใหม่ (รองรับ Cloudinary URL)
 	const handleDownload = async () => {
 		if (!videoUrl) return;
 		setIsDownloading(true);
@@ -189,10 +204,10 @@ export default function VideoCreatorPage() {
 
 						<button
 							onClick={handleGenerate}
-							disabled={isButtonDisabled} // 🟢 ล็อคปุ่มจริงที่นี่
+							disabled={isButtonDisabled}
 							className={`w-full py-4 rounded-xl font-bold text-white transition-all flex justify-center items-center gap-2 ${isButtonDisabled
-									? 'bg-gray-300 cursor-not-allowed opacity-60' // 🟢 แสดงผลสีเทาและเมาส์เป็นรูปห้ามกด
-									: 'bg-[#1e1e2d] hover:bg-gray-800 shadow-lg active:scale-95'
+								? 'bg-gray-300 cursor-not-allowed opacity-60'
+								: 'bg-[#1e1e2d] hover:bg-gray-800 shadow-lg active:scale-95'
 								}`}
 						>
 							{isGenerating ? (
@@ -200,7 +215,7 @@ export default function VideoCreatorPage() {
 									<RefreshCw className="w-5 h-5 animate-spin" />
 									Rendering Video...
 								</>
-							) : (session?.user?.coinBalance ?? 0) < 400 ? (
+							) : currentCoins < 400 ? ( /* 🟢 แจ้งเตือนเหรียญไม่พอจาก currentCoins */
 								'Insufficient Coins (400 Coins)'
 							) : (
 								<>

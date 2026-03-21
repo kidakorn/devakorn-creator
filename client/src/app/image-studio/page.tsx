@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import useSWR from 'swr'; // 🟢 เพิ่ม useSWR
 import {
 	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen
 } from "lucide-react";
@@ -13,8 +14,12 @@ const CATEGORIES = [
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon"
 ];
 
+// 🟢 สร้าง fetcher สำหรับ SWR
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function ImageStudio() {
-	const { data: session, update } = useSession();
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const { data: session } = useSession(); // 🟢 เอา update ออกไป เพราะเราจะใช้ SWR จัดการแทน
 	const [prompt, setPrompt] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [isGenerating, setIsLoading] = useState(false);
@@ -24,7 +29,17 @@ export default function ImageStudio() {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-	const isButtonDisabled = isGenerating || !prompt || (session?.user?.coinBalance ?? 0) < 20;
+	// 🟢 ใช้ SWR ดึงยอดเหรียญแบบ Real-time
+	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
+		refreshInterval: 10000,
+		revalidateOnFocus: true
+	});
+
+	// 🟢 ยอดเหรียญปัจจุบัน (ถ้า SWR ยังโหลดไม่เสร็จ ให้แสดง 0 ไปก่อน)
+	const currentCoins = balanceData?.coinBalance ?? 0;
+
+	// 🟢 เปลี่ยนมาเช็คยอดจาก currentCoins แทน session
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 20;
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -75,13 +90,15 @@ export default function ImageStudio() {
 			const data = await response.json();
 
 			if (response.ok) {
-				// 🟢 รับได้ทั้ง URL จาก Cloudinary (data.imageUrl) หรือ Base64 (data.image)
 				setGeneratedImage(data.imageUrl || `data:image/png;base64,${data.image}`);
 				setPrompt("");
 				removeImage();
 
+				// 🟢 สั่งให้ SWR อัปเดตยอดเงินทันทีแบบไร้รอยต่อ
 				if (data.remainingCoins !== undefined) {
-					await update({ coinBalance: data.remainingCoins });
+					mutate({ coinBalance: data.remainingCoins }, false); // อัปเดตบนหน้าจอทันที
+				} else {
+					mutate(); // หรือสั่งให้ดึงข้อมูลใหม่จากหลังบ้าน
 				}
 			} else {
 				alert(data.message || "Failed to generate product.");
@@ -94,12 +111,10 @@ export default function ImageStudio() {
 		}
 	};
 
-	// 🟢 ปรับปรุงฟังก์ชัน Download ให้รองรับ URL จาก Cloudinary
 	const handleDownload = async () => {
 		if (!generatedImage) return;
 
 		try {
-			// ถ้าเป็น URL (Cloudinary) ต้อง fetch เป็น blob ก่อนเพื่อบังคับ Download
 			if (generatedImage.startsWith('http')) {
 				const response = await fetch(generatedImage);
 				const blob = await response.blob();
@@ -112,7 +127,6 @@ export default function ImageStudio() {
 				document.body.removeChild(link);
 				window.URL.revokeObjectURL(url);
 			} else {
-				// ถ้าเป็น Base64 ใช้แบบเดิม
 				const link = document.createElement('a');
 				link.href = generatedImage;
 				link.download = `Devakorn_Product_${Date.now()}.png`;
@@ -231,8 +245,8 @@ export default function ImageStudio() {
 									onClick={handleGenerate}
 									disabled={isButtonDisabled}
 									className={`w-full font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all ${isButtonDisabled
-											? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
-											: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
+										? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+										: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
 										}`}
 								>
 									{isGenerating ? (
@@ -240,7 +254,7 @@ export default function ImageStudio() {
 											<RefreshCw className="w-4 h-4 animate-spin" />
 											Designing Product...
 										</>
-									) : (session?.user?.coinBalance ?? 0) < 20 ? (
+									) : currentCoins < 20 ? ( /* 🟢 เปลี่ยนมาใช้ currentCoins แจ้งเตือนเหรียญไม่พอ */
 										'Insufficient Coins'
 									) : (
 										<>

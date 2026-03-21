@@ -1,35 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import {
   ImageIcon,
   VideoIcon,
-  ArrowUpRight,
   Activity,
   Zap,
   Clock,
-  CheckCircle2,
   ChevronRight,
-  Sparkles,
-  Server,
   PackageOpen,
-  History
+  History,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardLayout from "@/components/DashboardLayout";
-
-// ข้อมูลจำลองสำหรับกราฟ (ในอนาคตสามารถทำ API มาดึงยอดรายวันได้ครับ)
-const usageData = [
-  { name: 'Mon', image: 4, video: 0 },
-  { name: 'Tue', image: 7, video: 1 },
-  { name: 'Wed', image: 5, video: 0 },
-  { name: 'Thu', image: 12, video: 2 },
-  { name: 'Fri', image: 8, video: 1 },
-  { name: 'Sat', image: 15, video: 3 },
-  { name: 'Sun', image: 10, video: 2 },
-];
+import LandingPage from "@/components/LandingPage";
 
 interface Asset {
   id: string;
@@ -39,33 +26,79 @@ interface Asset {
   category: string;
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function Home() {
-  const { data: session } = useSession();
-  const [recentAssets, setRecentAssets] = useState<Asset[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const { data: session, status } = useSession();
 
-  // 🟢 ดึงข้อมูลผลงานล่าสุดมาโชว์ใน Dashboard
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/user/assets');
-        const data = await response.json();
-        if (data.status === "success") {
-          setRecentAssets(data.assets.slice(0, 5)); // เอาแค่ 5 รายการล่าสุด
-          setTotalCount(data.assets.length);
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard stats", error);
+  // 🟢 ดึงข้อมูลเฉพาะตอนที่ "ล็อกอินแล้ว" เท่านั้น เพื่อป้องกัน Error 401
+  const { data: balanceData } = useSWR(
+    status === "authenticated" ? '/api/user/balance' : null,
+    fetcher,
+    { refreshInterval: 10000, revalidateOnFocus: true }
+  );
+  const currentCoins = balanceData?.coinBalance ?? 0;
+
+  const { data: assetsData } = useSWR(
+    status === "authenticated" ? '/api/user/assets' : null,
+    fetcher,
+    { refreshInterval: 10000, revalidateOnFocus: true }
+  );
+
+  const allAssets: Asset[] = assetsData?.status === "success" ? assetsData.assets : [];
+  const recentAssets = allAssets.slice(0, 5);
+  const totalCount = allAssets.length;
+
+  const generateChartData = (assets: Asset[]) => {
+    const chart = [
+      { name: 'Mon', image: 0, video: 0 },
+      { name: 'Tue', image: 0, video: 0 },
+      { name: 'Wed', image: 0, video: 0 },
+      { name: 'Thu', image: 0, video: 0 },
+      { name: 'Fri', image: 0, video: 0 },
+      { name: 'Sat', image: 0, video: 0 },
+      { name: 'Sun', image: 0, video: 0 },
+    ];
+
+    assets.forEach(asset => {
+      const date = new Date(asset.createdAt);
+      let dayIndex = date.getDay() - 1;
+      if (dayIndex === -1) dayIndex = 6;
+
+      if (asset.type === 'IMAGE') {
+        chart[dayIndex].image += 1;
+      } else if (asset.type === 'VIDEO') {
+        chart[dayIndex].video += 1;
       }
-    };
-    fetchStats();
-  }, []);
+    });
 
+    return chart;
+  };
+
+  const dynamicUsageData = generateChartData(allAssets);
+
+  // 🟢 --- ส่วนการตัดสลับหน้า (Routing Logic) --- 🟢
+
+  // 1. ระหว่างรอเช็คสถานะล็อกอิน
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa]">
+        <Loader2 className="w-10 h-10 animate-spin text-red-600 mb-4" />
+        <p className="text-gray-500 font-bold">Loading Devakorn AI...</p>
+      </div>
+    );
+  }
+
+  // 2. ถ้ายังไม่ล็อกอิน โชว์หน้า Landing Page คลีนๆ
+  if (status === "unauthenticated") {
+    return <LandingPage />;
+  }
+
+  // 3. ถ้าล็อกอินแล้ว โชว์หน้า Dashboard ตัวเต็ม!
   return (
     <DashboardLayout>
       <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
-        {/* --- Title Section --- */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview Dashboard</h1>
@@ -77,9 +110,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- Stats Row --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Total Generations */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 flex flex-col justify-between hover:border-red-500/40 hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-6">
               <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -95,24 +126,22 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Current Balance */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 flex flex-col justify-between hover:border-yellow-500/40 hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-6">
               <div className="w-10 h-10 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Zap className="w-5 h-5" />
               </div>
-              <Link href="/top-up" className="text-primary-red text-xs font-bold hover:underline">Top up coins</Link>
+              <Link href="/pricing" className="text-red-600 text-xs font-bold hover:underline">Top up coins</Link>
             </div>
             <div>
               <div className="flex items-baseline gap-1">
-                <h3 className="text-3xl font-black text-gray-900">{session?.user?.coinBalance || 0}</h3>
+                <h3 className="text-3xl font-black text-gray-900">{currentCoins.toLocaleString()}</h3>
                 <span className="text-gray-400 text-sm font-bold ml-1">Coins</span>
               </div>
               <p className="text-gray-500 text-xs font-bold mt-1 uppercase tracking-wider">Available Balance</p>
             </div>
           </div>
 
-          {/* Last Updated */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 flex flex-col justify-between hover:border-blue-400 hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-6">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -129,39 +158,42 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- Middle Row: Chart & Shortcuts --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-base font-black text-gray-900 tracking-tight">Usage Analytics</h2>
-                <p className="text-xs text-gray-500 font-medium">Generations trend over time</p>
+                <p className="text-xs text-gray-500 font-medium">Generations trend over time (Real-time)</p>
               </div>
             </div>
 
             <div className="w-full h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={usageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={dynamicUsageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorImage" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                     </linearGradient>
+                    <linearGradient id="colorVideo" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#111827" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#111827" stopOpacity={0} />
+                    </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     itemStyle={{ fontSize: '14px', fontWeight: 'bold' }}
                   />
                   <Area type="monotone" dataKey="image" name="Images" stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorImage)" />
+                  <Area type="monotone" dataKey="video" name="Videos" stroke="#111827" strokeWidth={3} fillOpacity={1} fill="url(#colorVideo)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Quick Shortcuts */}
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Start Production</h2>
 
@@ -189,7 +221,7 @@ export default function Home() {
 
             <Link href="/gallery" className="block bg-gray-50 border border-gray-200 border-dashed rounded-2xl p-5 hover:bg-white hover:border-solid hover:border-gray-300 transition-all group">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 group-hover:text-primary-red transition-colors">
+                <div className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 group-hover:text-red-600 transition-colors">
                   <History className="w-5 h-5" />
                 </div>
                 <div>
@@ -201,7 +233,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- Recent Activity Table (Dynamic) --- */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
           <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
             <div>
