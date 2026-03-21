@@ -1,7 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useSession } from "next-auth/react";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
+import { useState } from "react";
+import fpPromise from "@fingerprintjs/fingerprintjs";
+import toast, { Toaster } from "react-hot-toast"; // 🟢 1. นำเข้า react-hot-toast
 import {
   ImageIcon,
   VideoIcon,
@@ -11,7 +15,8 @@ import {
   ChevronRight,
   PackageOpen,
   History,
-  Loader2
+  Loader2,
+  Gift
 } from "lucide-react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -31,7 +36,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function Home() {
   const { data: session, status } = useSession();
 
-  // 🟢 ดึงข้อมูลเฉพาะตอนที่ "ล็อกอินแล้ว" เท่านั้น เพื่อป้องกัน Error 401
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [hideBonusButton, setHideBonusButton] = useState(false);
+
   const { data: balanceData } = useSWR(
     status === "authenticated" ? '/api/user/balance' : null,
     fetcher,
@@ -65,11 +72,8 @@ export default function Home() {
       let dayIndex = date.getDay() - 1;
       if (dayIndex === -1) dayIndex = 6;
 
-      if (asset.type === 'IMAGE') {
-        chart[dayIndex].image += 1;
-      } else if (asset.type === 'VIDEO') {
-        chart[dayIndex].video += 1;
-      }
+      if (asset.type === 'IMAGE') chart[dayIndex].image += 1;
+      else if (asset.type === 'VIDEO') chart[dayIndex].video += 1;
     });
 
     return chart;
@@ -77,9 +81,42 @@ export default function Home() {
 
   const dynamicUsageData = generateChartData(allAssets);
 
-  // 🟢 --- ส่วนการตัดสลับหน้า (Routing Logic) --- 🟢
+  const handleClaimBonus = async () => {
+    setIsClaiming(true);
 
-  // 1. ระหว่างรอเช็คสถานะล็อกอิน
+    // 🟢 2. เรียกใช้ loading toast ระหว่างรอ
+    const toastId = toast.loading('กำลังตรวจสอบอุปกรณ์ของคุณ...');
+
+    try {
+      const fp = await fpPromise.load();
+      const result = await fp.get();
+      const visitorId = result.visitorId;
+
+      const response = await fetch('/api/user/claim-free-coins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // 🟢 3. อัปเดต toast เป็น success
+        toast.success(data.message, { id: toastId, duration: 4000 });
+        mutate('/api/user/balance');
+        setHideBonusButton(true);
+      } else {
+        // 🟢 4. อัปเดต toast เป็น error
+        toast.error(data.message, { id: toastId, duration: 5000 });
+        if (response.status === 403) setHideBonusButton(true);
+      }
+    } catch (error) {
+      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อระบบ', { id: toastId });
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa]">
@@ -89,14 +126,13 @@ export default function Home() {
     );
   }
 
-  // 2. ถ้ายังไม่ล็อกอิน โชว์หน้า Landing Page คลีนๆ
   if (status === "unauthenticated") {
     return <LandingPage />;
   }
 
-  // 3. ถ้าล็อกอินแล้ว โชว์หน้า Dashboard ตัวเต็ม!
   return (
     <DashboardLayout>
+     
       <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
@@ -104,12 +140,27 @@ export default function Home() {
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview Dashboard</h1>
             <p className="text-gray-500 text-sm mt-1 font-medium">Welcome back, {session?.user?.name || 'Creator'}. Here is your production summary.</p>
           </div>
-          <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs font-bold text-emerald-700 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            AI Engines Operational
+          <div className="flex items-center gap-3">
+
+            {!hideBonusButton && (
+              <button
+                onClick={handleClaimBonus}
+                disabled={isClaiming}
+                className="px-4 py-2 bg-linear-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white rounded-xl flex items-center gap-2 text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-70"
+              >
+                {isClaiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4 animate-bounce" />}
+                {isClaiming ? 'Verifying...' : 'Claim 50 Free Coins'}
+              </button>
+            )}
+
+            <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs font-bold text-emerald-700 shadow-sm sm:flex">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              AI Engines Operational
+            </div>
           </div>
         </div>
 
+        {/* ... (โค้ด DashboardLayout ส่วนอื่นๆ เหมือนเดิมครับ) ... */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 flex flex-col justify-between hover:border-red-500/40 hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-6">

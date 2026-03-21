@@ -1,7 +1,7 @@
 // prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js" // 🟢 แก้เป็นตัวนี้เพื่อให้ Prisma สร้าง Client ได้ถูกต้อง
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -48,7 +48,7 @@ enum Role {
   ADMIN
 }
 
-// --- ตาราง User ของเรา (เพิ่มการเชื่อมโยงกับ NextAuth) ---
+// --- ตาราง User ---
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -56,9 +56,13 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  coinBalance   Int       @default(50)
 
-  // 🟢 2. เพิ่มช่องสิทธิ์ และตั้งค่าเริ่มต้นให้ทุกคนที่สมัครใหม่เป็นแค่ USER
+  // 🟢 1. เปลี่ยนค่าเริ่มต้นเป็น 0 ป้องกันการสมัครปุ๊บได้ปั๊บ
+  coinBalance Int @default(0)
+
+  // 🟢 2. เพิ่มตัวแปรเช็คว่าเคยกดรับสิทธิ์ฟรี 50 Coins ไปหรือยัง
+  hasClaimedFreeCoins Boolean @default(false)
+
   role Role @default(USER)
 
   createdAt DateTime  @default(now())
@@ -77,7 +81,7 @@ model GeneratedAsset {
   type        String // "IMAGE", "VIDEO", หรือ "PROMPT"
   prompt      String   @db.Text
   category    String?
-  outputUrl   String   @db.Text // เก็บ Base64 (ตอนนี้) หรือ URL (อนาคต)
+  outputUrl   String   @db.Text
   aspectRatio String?
   createdAt   DateTime @default(now())
 
@@ -85,30 +89,38 @@ model GeneratedAsset {
 }
 
 enum TransactionType {
-  TOPUP // เติมเงินซื้อเหรียญ
-  SPEND_IMAGE // ใช้เหรียญเจนรูป
-  SPEND_VIDEO // ใช้เหรียญเจนวิดีโอ
-  SPEND_PROMPT // ใช้เหรียญเจน prompt
-  REFUND // คืนเหรียญ (กรณีระบบพัง)
+  TOPUP
+  SPEND_IMAGE
+  SPEND_VIDEO
+  SPEND_PROMPT
+  REFUND
+  FREE_BONUS // 🟢 เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
 }
 
 enum TransactionStatus {
-  PENDING // รอดำเนินการ (เช่น รอธนาคารยืนยัน)
-  COMPLETED // สำเร็จ (เหรียญเข้า/ออก เรียบร้อย)
-  FAILED // ล้มเหลว (ตัดเงินไม่ผ่าน)
-  CANCELLED // ยกเลิก
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
-// 🟢 สร้างตารางสมุดบัญชี (Ledger)
 model Transaction {
   id           String            @id @default(cuid())
   userId       String
   user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   type         TransactionType
-  amount       Int // จำนวนเหรียญ (บวก หรือ ลบ)
-  balanceAfter Int // ยอดคงเหลือหลังจากทำรายการ (เพื่อการตรวจสอบย้อนหลัง)
-  description  String? // รายละเอียด เช่น "Generate 1 Image", "Top-up Starter Pack"
-  referenceId  String?           @unique // รหัสบิลอ้างอิงจาก Payment Gateway (Stripe/Omise) ป้องกันการส่งบิลซ้ำ
+  amount       Int
+  balanceAfter Int
+  description  String?
+  referenceId  String?           @unique
   status       TransactionStatus @default(COMPLETED)
   createdAt    DateTime          @default(now())
+}
+
+// 🟢 3. เพิ่มตารางจำรหัสอุปกรณ์ (กันปั๊มบัญชี)
+model DeviceFingerprint {
+  id        String   @id @default(cuid())
+  visitorId String   @unique // รหัสประจำเครื่อง (จาก FingerprintJS)
+  userId    String // ใครเป็นคนใช้เครื่องนี้กดรับไป
+  createdAt DateTime @default(now())
 }

@@ -11,9 +11,10 @@ import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 
+// 🟢 เปลี่ยนข้อความ Error ใน Form เป็นภาษาอังกฤษทั้งหมด
 const loginSchema = z.object({
-	email: z.string().min(1, "กรุณากรอกอีเมล").email("รูปแบบอีเมลไม่ถูกต้อง"),
-	password: z.string().min(6, "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"),
+	email: z.string().min(1, "Email is required").email("Invalid email address"),
+	password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -37,9 +38,11 @@ export default function LoginPage() {
 		setIsCredentialsLoading(false);
 
 		if (res?.error) {
-			toast.error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+			// 🟢 เปลี่ยนแจ้งเตือนเมื่อรหัสผิดเป็นภาษาอังกฤษ
+			toast.error("Invalid email or password");
 		} else {
-			toast.success("เข้าสู่ระบบสำเร็จ!");
+			// 🟢 เปลี่ยนเป็นภาษาอังกฤษ และตั้งเวลาให้หายไปไวขึ้นนิดนึง (2.5 วินาที) จะได้ไม่ค้างหน้าจอนานไป
+			toast.success("Login successful!", { duration: 2500 });
 			router.push("/");
 			router.refresh();
 		}
@@ -51,15 +54,12 @@ export default function LoginPage() {
 	};
 
 	return (
-		// 🟢 เปลี่ยนพื้นหลังเป็นสีเทาอ่อนให้ตัดกับ Card สีขาว
 		<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-			{/* 🟢 ใส่เงาให้ Card ดูลอยขึ้นมาและมนขึ้น (rounded-3xl) */}
 			<div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
 
 				{/* --- ส่วน Header & Logo --- */}
 				<div className="text-center mb-8">
 					<div className="flex justify-center mb-2">
-						{/* 🟢 เรียกใช้ favicon.ico แทนตัวอักษร D */}
 						<img
 							src="/favicon.ico"
 							alt="DEVAKORN Logo"
@@ -79,7 +79,6 @@ export default function LoginPage() {
 					{isGoogleLoading ? (
 						<Loader2 className="w-5 h-5 animate-spin text-text-main/50" />
 					) : (
-						// /eslint-disable-next-line @next/next/no-img-element
 						<img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
 					)}
 					Continue with Google
@@ -117,7 +116,6 @@ export default function LoginPage() {
 						{errors.password && <p className="text-primary-red text-xs font-bold mt-2 flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-primary-red"></span>{errors.password.message}</p>}
 					</div>
 
-					{/* 🟢 ปุ่ม Login หลัก ใช้สี dark-bg (ดำสนิท) ตัดกับลูกเล่น hover เป็นสีแดง primary-red */}
 					<button
 						type="submit"
 						disabled={isCredentialsLoading || isGoogleLoading}
