@@ -7,24 +7,23 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
-	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet // 🟢 เพิ่มไอคอน Wallet
+	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck // 🟢 เพิ่มไอคอน ShieldCheck
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
 	const pathname = usePathname();
 	const { data: session } = useSession();
 
-	// 🟢 เพิ่มเมนู Wallet & Coins ให้คลิกจาก Sidebar ได้เลย
 	const navItems = [
 		{ name: "Overview", href: "/", icon: LayoutDashboard },
 		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
 		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
 		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
-		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet }, // ✨ เมนูใหม่!
+		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet },
 	];
 
-	// 🟢 ใช้ (session?.user as any) เพื่อป้องกัน TypeScript โวยวายเรื่อง role 
+	// 🟢 เช็คสิทธิ์แอดมิน
 	const isAdmin = (session?.user as any)?.role === "ADMIN";
 
 	return (
@@ -73,11 +72,26 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 					);
 				})}
 
-				{/* 🟢 แสดงเมนู Settings เฉพาะ Admin เท่านั้น */}
+				{/* 🟢 แสดงเมนูพิเศษเฉพาะ Admin เท่านั้น */}
 				{isAdmin && (
 					<>
-						{/* เส้นคั่นบางๆ ก่อนเมนู Admin ให้ดูเป็นสัดส่วน */}
 						<div className="h-px bg-gray-300/50 my-4 mx-2"></div>
+
+						{/* 👑 ปุ่มไปหน้า Admin Panel */}
+						<Link
+							href="/admin"
+							title={!isOpen ? "Admin Panel" : undefined}
+							className={`flex items-center rounded-lg font-medium transition-all ${isOpen ? 'px-4 py-2.5 gap-3' : 'justify-center py-3'
+								} ${pathname === "/admin"
+									? "bg-primary-red/10 text-primary-red font-bold"
+									: "text-text-main/60 hover:bg-light-gray hover:text-dark-bg"
+								}`}
+						>
+							<ShieldCheck className="w-5 h-5 shrink-0" />
+							{isOpen && <span className="whitespace-nowrap">Admin Panel</span>}
+						</Link>
+
+						{/* ⚙️ ปุ่มไปหน้า Settings */}
 						<Link
 							href="/settings"
 							title={!isOpen ? "Settings" : undefined}
