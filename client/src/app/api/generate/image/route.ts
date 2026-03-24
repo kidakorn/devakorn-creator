@@ -29,6 +29,14 @@ export async function POST(req: Request) {
 			return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
 		}
 
+		// บล็อกบัญชีที่โดนแบน ไม่ให้ทำงานต่อ
+		if (user.isBanned) {
+			return NextResponse.json({
+				status: "error",
+				message: "Account Suspended: You are not allowed to generate assets."
+			}, { status: 403 });
+		}
+
 		const COST_PER_IMAGE = 20;
 		if (user.coinBalance < COST_PER_IMAGE) {
 			return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
@@ -95,7 +103,6 @@ export async function POST(req: Request) {
 
 		const base64Image = (response.data as any).predictions[0].bytesBase64Encoded;
 
-		// 🟢 1. ย้าย Cloudinary ขึ้นมาก่อน! ถ้าอัปโหลดไม่ผ่าน ระบบจะข้ามไป Catch Error โดยที่ยังไม่หักเหรียญ
 		const uploadResponse = await cloudinary.uploader.upload(
 			`data:image/png;base64,${base64Image}`,
 			{
@@ -104,16 +111,13 @@ export async function POST(req: Request) {
 			}
 		);
 
-		// 🛡️ 2. เริ่มระบบ Transaction (มัดรวม 3 คำสั่ง พังอันนึง คืนค่าทั้งหมด!)
 		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
 
-			// 2.1 หักเหรียญลูกค้าอย่างปลอดภัย
 			prisma.user.update({
 				where: { id: user.id },
 				data: { coinBalance: { decrement: COST_PER_IMAGE } }
 			}),
 
-			// 2.2 บันทึกผลงานลง Gallery
 			prisma.generatedAsset.create({
 				data: {
 					userId: user.id,
@@ -125,7 +129,6 @@ export async function POST(req: Request) {
 				}
 			}),
 
-			// 2.3 จดบันทึกสมุดบัญชี (Ledger)
 			prisma.transaction.create({
 				data: {
 					userId: user.id,

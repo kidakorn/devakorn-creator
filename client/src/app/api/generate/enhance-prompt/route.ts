@@ -16,6 +16,14 @@ export async function POST(req: Request) {
 		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 		if (!user) return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
 
+		// 🟢 ด่านป้องกัน: บล็อกบัญชีที่โดนแบน ไม่ให้ทำงานต่อ
+		if (user.isBanned) {
+			return NextResponse.json({
+				status: "error",
+				message: "Account Suspended: You are not allowed to use the prompt enhancer."
+			}, { status: 403 });
+		}
+
 		const COST_PER_PROMPT = 2;
 		if (user.coinBalance < COST_PER_PROMPT) {
 			return NextResponse.json({ status: "error", message: "Not enough coins! Please top up." }, { status: 403 });
@@ -58,7 +66,7 @@ export async function POST(req: Request) {
 
 		// 🛡️ เริ่มระบบ Transaction เพื่อหักเหรียญและจดบัญชีพร้อมกัน
 		const [updatedUser, ledgerEntry] = await prisma.$transaction([
-			
+
 			// 1. หักเหรียญลูกค้า
 			prisma.user.update({
 				where: { id: user.id },
@@ -69,7 +77,7 @@ export async function POST(req: Request) {
 			prisma.transaction.create({
 				data: {
 					userId: user.id,
-					type: 'SPEND_PROMPT', // 🟢 ประเภทที่เราเพิ่งเพิ่มใน schema
+					type: 'SPEND_PROMPT',
 					amount: -COST_PER_PROMPT,
 					balanceAfter: user.coinBalance - COST_PER_PROMPT,
 					description: `Enhanced Prompt: ${idea.substring(0, 30)}...`,

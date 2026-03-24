@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import useSWR from 'swr'; // 🟢 เพิ่ม useSWR
+import useSWR from 'swr';
 import {
-	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen
+	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -14,12 +14,11 @@ const CATEGORIES = [
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon"
 ];
 
-// 🟢 สร้าง fetcher สำหรับ SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function ImageStudio() {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const { data: session } = useSession(); // 🟢 เอา update ออกไป เพราะเราจะใช้ SWR จัดการแทน
+	const { data: session } = useSession();
 	const [prompt, setPrompt] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [isGenerating, setIsLoading] = useState(false);
@@ -29,17 +28,17 @@ export default function ImageStudio() {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-	// 🟢 ใช้ SWR ดึงยอดเหรียญแบบ Real-time
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
 		revalidateOnFocus: true
 	});
 
-	// 🟢 ยอดเหรียญปัจจุบัน (ถ้า SWR ยังโหลดไม่เสร็จ ให้แสดง 0 ไปก่อน)
 	const currentCoins = balanceData?.coinBalance ?? 0;
+	// ดึงสถานะการแบนจาก API เดียวกับที่ดึงเหรียญ
+	const isBanned = balanceData?.isBanned ?? false;
 
-	// 🟢 เปลี่ยนมาเช็คยอดจาก currentCoins แทน session
-	const isButtonDisabled = isGenerating || !prompt || currentCoins < 20;
+	// นำ isBanned มาใช้เป็นเงื่อนไขในการปิดปุ่มด้วย
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 20 || isBanned;
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -67,6 +66,7 @@ export default function ImageStudio() {
 	};
 
 	const handleGenerate = async () => {
+		if (isBanned) return alert("Your account has been suspended.");
 		if (!prompt) return alert("Please describe your product.");
 
 		setIsLoading(true);
@@ -94,11 +94,10 @@ export default function ImageStudio() {
 				setPrompt("");
 				removeImage();
 
-				// 🟢 สั่งให้ SWR อัปเดตยอดเงินทันทีแบบไร้รอยต่อ
 				if (data.remainingCoins !== undefined) {
-					mutate({ coinBalance: data.remainingCoins }, false); // อัปเดตบนหน้าจอทันที
+					mutate({ coinBalance: data.remainingCoins, isBanned: isBanned }, false);
 				} else {
-					mutate(); // หรือสั่งให้ดึงข้อมูลใหม่จากหลังบ้าน
+					mutate();
 				}
 			} else {
 				alert(data.message || "Failed to generate product.");
@@ -241,28 +240,39 @@ export default function ImageStudio() {
 									</div>
 								</div>
 
-								<button
-									onClick={handleGenerate}
-									disabled={isButtonDisabled}
-									className={`w-full font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all ${isButtonDisabled
-										? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
-										: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
-										}`}
-								>
-									{isGenerating ? (
-										<>
-											<RefreshCw className="w-4 h-4 animate-spin" />
-											Designing Product...
-										</>
-									) : currentCoins < 20 ? ( /* 🟢 เปลี่ยนมาใช้ currentCoins แจ้งเตือนเหรียญไม่พอ */
-										'Insufficient Coins'
-									) : (
-										<>
-											<Sparkles className="w-4 h-4" />
-											Generate Image (-20 Coins)
-										</>
+								<div>
+									{/* แจ้งเตือนสถานะแบน */}
+									{isBanned && (
+										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
+											<ShieldAlert className="w-4 h-4" /> Account Suspended
+										</div>
 									)}
-								</button>
+
+									<button
+										onClick={handleGenerate}
+										disabled={isButtonDisabled}
+										className={`w-full font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all ${isButtonDisabled
+											? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+											: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
+											}`}
+									>
+										{isGenerating ? (
+											<>
+												<RefreshCw className="w-4 h-4 animate-spin" />
+												Designing Product...
+											</>
+										) : isBanned ? (
+											'Suspended'
+										) : currentCoins < 20 ? (
+											'Insufficient Coins'
+										) : (
+											<>
+												<Sparkles className="w-4 h-4" />
+												Generate Image (-20 Coins)
+											</>
+										)}
+									</button>
+								</div>
 							</div>
 						</div>
 

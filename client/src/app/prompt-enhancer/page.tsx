@@ -3,38 +3,40 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import useSWR from 'swr'; // 🟢 1. Import SWR
-import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen } from "lucide-react";
+import useSWR from 'swr';
+// 🟢 เพิ่ม ShieldAlert เข้ามาสำหรับไอคอนแจ้งเตือน
+import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
-// 🟢 เปลี่ยนหมวดหมู่ให้เป็น "ประเภทสินค้า" ทั้งหมด
 const CATEGORIES = [
 	"Product Photography", "T-Shirt Design", "Sticker & Die-cut",
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon", "Product Mockup"
 ];
 
-// 🟢 2. สร้าง fetcher สำหรับ SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PromptEnhancerPage() {
-	const { data: session } = useSession(); // 🟢 เอา update ออก เพราะเราใช้ SWR แทน
+	const { data: session } = useSession();
 	const [idea, setIdea] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
 
-	// 🟢 3. ใช้ SWR ดึงยอดเหรียญแบบ Real-time
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
 		revalidateOnFocus: true
 	});
 
-	// 🟢 ยอดเหรียญปัจจุบัน
 	const currentCoins = balanceData?.coinBalance ?? 0;
+	// 🟢 ดึงสถานะการแบนมาใช้งาน
+	const isBanned = balanceData?.isBanned ?? false;
 
 	const handleMagic = async () => {
+		// 🟢 ดักไม่ให้ทำงานถ้าโดนแบน
+		if (isBanned) return alert("Your account has been suspended.");
 		if (!idea) return;
+
 		setIsEnhancing(true);
 		setEnhancedPrompt("");
 		setIsCopied(false);
@@ -51,9 +53,8 @@ export default function PromptEnhancerPage() {
 			if (response.ok && data.status === 'success') {
 				setEnhancedPrompt(data.prompt);
 
-				// 🟢 4. สั่งให้ SWR อัปเดตยอดเงินทันที
 				if (data.remainingCoins !== undefined) {
-					mutate({ coinBalance: data.remainingCoins }, false);
+					mutate({ coinBalance: data.remainingCoins, isBanned: isBanned }, false);
 				} else {
 					mutate();
 				}
@@ -75,8 +76,8 @@ export default function PromptEnhancerPage() {
 		setTimeout(() => setIsCopied(false), 2000);
 	};
 
-	// 🟢 5. เพิ่มเช็คเหรียญไม่พอ
-	const isButtonDisabled = isEnhancing || !idea || currentCoins < 2;
+	// 🟢 เพิ่มเงื่อนไข isBanned เข้าไปเพื่อให้ปุ่ม Disabled
+	const isButtonDisabled = isEnhancing || !idea || currentCoins < 2 || isBanned;
 
 	return (
 		<DashboardLayout>
@@ -133,28 +134,39 @@ export default function PromptEnhancerPage() {
 								/>
 							</div>
 
-							<button
-								onClick={handleMagic}
-								disabled={isButtonDisabled}
-								className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm mt-auto active:scale-95 ${isButtonDisabled
+							<div className="mt-auto">
+								{/* 🟢 แจ้งเตือนสถานะแบน */}
+								{isBanned && (
+									<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
+										<ShieldAlert className="w-4 h-4" /> Account Suspended
+									</div>
+								)}
+
+								<button
+									onClick={handleMagic}
+									disabled={isButtonDisabled}
+									className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${isButtonDisabled
 										? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
 										: 'bg-dark-bg hover:bg-primary-red text-white'
-									}`}
-							>
-								{isEnhancing ? (
-									<>
-										<Sparkles className="w-4 h-4 animate-spin" />
-										Designing Product...
-									</>
-								) : currentCoins < 2 ? (
-									'Insufficient Coins (2 Coins)'
-								) : (
-									<>
-										<Wand2 className="w-4 h-4" />
-										Enhance Prompt (-2 Coins)
-									</>
-								)}
-							</button>
+										}`}
+								>
+									{isEnhancing ? (
+										<>
+											<Sparkles className="w-4 h-4 animate-spin" />
+											Designing Product...
+										</>
+									) : isBanned ? (
+										'Suspended'
+									) : currentCoins < 2 ? (
+										'Insufficient Coins (2 Coins)'
+									) : (
+										<>
+											<Wand2 className="w-4 h-4" />
+											Enhance Prompt (-2 Coins)
+										</>
+									)}
+								</button>
+							</div>
 						</div>
 					</section>
 

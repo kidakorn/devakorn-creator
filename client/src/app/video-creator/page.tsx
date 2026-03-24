@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from "next-auth/react";
-import useSWR from 'swr'; // 🟢 1. Import SWR
+import useSWR from 'swr';
 import {
 	Video,
 	Download,
@@ -12,7 +12,8 @@ import {
 	RefreshCw,
 	Play,
 	Monitor,
-	Clapperboard
+	Clapperboard,
+	ShieldAlert
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -25,11 +26,10 @@ const categories = [
 	'B-Roll Footage'
 ];
 
-// 🟢 2. สร้าง fetcher สำหรับ SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function VideoCreatorPage() {
-	const { data: session } = useSession(); // เอา update ออก เพราะเราใช้ SWR แทน
+	const { data: session } = useSession();
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
@@ -37,19 +37,20 @@ export default function VideoCreatorPage() {
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
 	const [isDownloading, setIsDownloading] = useState(false);
 
-	// 🟢 3. ใช้ SWR ดึงยอดเหรียญแบบ Real-time
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
 		revalidateOnFocus: true
 	});
 
-	// 🟢 ยอดเหรียญปัจจุบัน
 	const currentCoins = balanceData?.coinBalance ?? 0;
+	// 🟢 ดึงสถานะการแบนมาใช้งาน
+	const isBanned = balanceData?.isBanned ?? false;
 
-	// 🟢 เปลี่ยนการเช็คเหรียญมาใช้ currentCoins
-	const isButtonDisabled = isGenerating || !prompt || currentCoins < 400;
+	// 🟢 เพิ่มเงื่อนไข isBanned เข้าไปเพื่อให้ปุ่ม Disabled
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 400 || isBanned;
 
 	const handleGenerate = async () => {
+		if (isBanned) return alert("Your account has been suspended.");
 		if (!prompt) return alert("Please describe your video scene.");
 
 		setIsGenerating(true);
@@ -75,9 +76,8 @@ export default function VideoCreatorPage() {
 					setVideoUrl(finalUrl);
 					setPrompt('');
 
-					// 🟢 4. สั่งให้ SWR อัปเดตยอดเงินบนหน้าจอทันที
 					if (data.remainingCoins !== undefined) {
-						mutate({ coinBalance: data.remainingCoins }, false);
+						mutate({ coinBalance: data.remainingCoins, isBanned: isBanned }, false);
 					} else {
 						mutate();
 					}
@@ -202,28 +202,39 @@ export default function VideoCreatorPage() {
 							/>
 						</div>
 
-						<button
-							onClick={handleGenerate}
-							disabled={isButtonDisabled}
-							className={`w-full py-4 rounded-xl font-bold text-white transition-all flex justify-center items-center gap-2 ${isButtonDisabled
-								? 'bg-gray-300 cursor-not-allowed opacity-60'
-								: 'bg-[#1e1e2d] hover:bg-gray-800 shadow-lg active:scale-95'
-								}`}
-						>
-							{isGenerating ? (
-								<>
-									<RefreshCw className="w-5 h-5 animate-spin" />
-									Rendering Video...
-								</>
-							) : currentCoins < 400 ? ( /* 🟢 แจ้งเตือนเหรียญไม่พอจาก currentCoins */
-								'Insufficient Coins (400 Coins)'
-							) : (
-								<>
-									<Play className="w-5 h-5 fill-current" />
-									Generate Video Ad (-400 Coins)
-								</>
+						<div>
+							{/* 🟢 แจ้งเตือนสถานะแบน */}
+							{isBanned && (
+								<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
+									<ShieldAlert className="w-4 h-4" /> Account Suspended
+								</div>
 							)}
-						</button>
+
+							<button
+								onClick={handleGenerate}
+								disabled={isButtonDisabled}
+								className={`w-full py-4 rounded-xl font-bold text-white transition-all flex justify-center items-center gap-2 ${isButtonDisabled
+									? 'bg-gray-300 cursor-not-allowed opacity-60'
+									: 'bg-[#1e1e2d] hover:bg-gray-800 shadow-lg active:scale-95'
+									}`}
+							>
+								{isGenerating ? (
+									<>
+										<RefreshCw className="w-5 h-5 animate-spin" />
+										Rendering Video...
+									</>
+								) : isBanned ? (
+									'Suspended'
+								) : currentCoins < 400 ? (
+									'Insufficient Coins (400 Coins)'
+								) : (
+									<>
+										<Play className="w-5 h-5 fill-current" />
+										Generate Video Ad (-400 Coins)
+									</>
+								)}
+							</button>
+						</div>
 					</div>
 
 					{/* Right Panel */}
