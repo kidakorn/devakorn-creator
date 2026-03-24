@@ -21,6 +21,7 @@ export async function GET() {
 				email: true,
 				coinBalance: true,
 				role: true,
+				isBanned: true, // 🟢 เพิ่มบรรทัดนี้เพื่อส่งข้อมูลการแบนไปที่หน้าเว็บ
 				createdAt: true,
 				_count: { select: { generatedAssets: true } }
 			}
@@ -30,11 +31,16 @@ export async function GET() {
 		const totalUsers = users.length;
 		const totalAssets = await prisma.generatedAsset.count();
 		const totalCoinsInSystem = users.reduce((sum, user) => sum + user.coinBalance, 0);
+		const pendingResets = await prisma.passwordResetToken.findMany({
+			where: { status: "PENDING" },
+			orderBy: { createdAt: "desc" }
+		});
 
 		return NextResponse.json({
 			status: "success",
 			stats: { totalUsers, totalAssets, totalCoinsInSystem },
-			users
+			users,
+			pendingResets: pendingResets
 		});
 	} catch (error: any) {
 		return NextResponse.json({ status: "error", message: error.message }, { status: 500 });

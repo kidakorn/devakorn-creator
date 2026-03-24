@@ -10,10 +10,9 @@ import bcrypt from "bcryptjs";
 export const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
 
-	// 🟢 1. ขยายบล็อก session เพื่อใส่ maxAge (Session Timeout)
 	session: {
 		strategy: "jwt",
-		maxAge: 30 * 60, // ⏳ ตั้งค่าให้ออกจากระบบอัตโนมัติใน 30 นาที (ถ้าอยาก 24 ชม. * 60 นาที * 60 วินาที)
+		maxAge: 30 * 60,
 	},
 
 	providers: [
@@ -52,6 +51,19 @@ export const authOptions: NextAuthOptions = {
 	],
 
 	callbacks: {
+		// 🟢 1. ดักจับการล็อกอิน ถ้าโดนแบนให้เตะกลับ
+		async signIn({ user }) {
+			if (user?.email) {
+				const dbUser = await prisma.user.findUnique({
+					where: { email: user.email },
+					select: { isBanned: true }
+				});
+				if (dbUser?.isBanned) {
+					return "/login?error=banned"; // ส่ง parameter กลับไปหน้าล็อกอิน
+				}
+			}
+			return true;
+		},
 		async jwt({ token, user, trigger, session }) {
 			if (user) {
 				token.role = (user as any).role;

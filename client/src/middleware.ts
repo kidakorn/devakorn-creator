@@ -1,8 +1,8 @@
 export { default } from "next-auth/middleware";
 
 export const config = {
-  // 🟢 เติม |$ เข้าไป เพื่อยกเว้นหน้าแรก (/) ให้โชว์ Landing Page ได้
+  // 🟢 เติม forgot-password และ reset-password เข้าไปในกลุ่มข้อยกเว้น
   matcher: [
-    "/((?!login|register|api|_next/static|_next/image|favicon.ico|$).*)"
+    "/((?!login|register|forgot-password|reset-password|api|_next/static|_next/image|favicon.ico|$).*)"
   ],
 };

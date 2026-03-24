@@ -1,17 +1,38 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import toast from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react"; // 🟢 Import ShieldAlert เข้ามา
 import Link from "next/link";
 
-// 🟢 เปลี่ยนข้อความ Error ใน Form เป็นภาษาอังกฤษทั้งหมด
+// 🟢 สร้าง Component ดักจับ Error และล้าง URL
+function LoginErrorHandler() {
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const error = searchParams.get("error");
+
+	useEffect(() => {
+		if (error === "banned") {
+			// 🟢 เปลี่ยนจาก Emoji เป็น Icon ของจริง
+			toast("Account Suspended. You have been banned by the administrator.", {
+				duration: 5000,
+				icon: <ShieldAlert className="w-5 h-5 text-red-600" />,
+				style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #F87171' }
+			});
+			// ล้าง URL ให้สะอาด ป้องกันคนอื่นล็อกอินไม่ได้
+			router.replace("/login");
+		}
+	}, [error, router]);
+
+	return null;
+}
+
 const loginSchema = z.object({
 	email: z.string().min(1, "Email is required").email("Invalid email address"),
 	password: z.string().min(6, "Password must be at least 6 characters"),
@@ -37,11 +58,18 @@ export default function LoginPage() {
 		});
 		setIsCredentialsLoading(false);
 
+		// ถ้า Error แบบปกติ (เช่น รหัสผิด)
 		if (res?.error) {
-			// 🟢 เปลี่ยนแจ้งเตือนเมื่อรหัสผิดเป็นภาษาอังกฤษ
-			toast.error("Invalid email or password");
-		} else {
-			// 🟢 เปลี่ยนเป็นภาษาอังกฤษ และตั้งเวลาให้หายไปไวขึ้นนิดนึง (2.5 วินาที) จะได้ไม่ค้างหน้าจอนานไป
+			if (res.error === "banned") {
+				// 🟢 เปลี่ยนจาก Emoji เป็น Icon ของจริง
+				toast("Account Suspended.", {
+					icon: <ShieldAlert className="w-5 h-5 text-red-600" />,
+					style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #F87171' }
+				});
+			} else {
+				toast.error("Invalid email or password");
+			}
+		} else if (res?.ok) {
 			toast.success("Login successful!", { duration: 2500 });
 			router.push("/");
 			router.refresh();
@@ -55,9 +83,14 @@ export default function LoginPage() {
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+
+			{/* 🟢 เรียกใช้ตัวดักจับ Error ที่นี่ */}
+			<Suspense fallback={null}>
+				<LoginErrorHandler />
+			</Suspense>
+
 			<div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
 
-				{/* --- ส่วน Header & Logo --- */}
 				<div className="text-center mb-8">
 					<div className="flex justify-center mb-2">
 						<img
@@ -70,7 +103,6 @@ export default function LoginPage() {
 					<p className="text-sm text-text-main/50 mt-2 font-medium">Sign in to continue your creative journey.</p>
 				</div>
 
-				{/* --- ปุ่ม Google Login --- */}
 				<button
 					onClick={handleGoogleLogin}
 					disabled={isGoogleLoading || isCredentialsLoading}
@@ -90,7 +122,6 @@ export default function LoginPage() {
 					<div className="flex-1 border-t border-gray-200"></div>
 				</div>
 
-				{/* --- ฟอร์ม Email/Password --- */}
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 					<div>
 						<label className="block text-xs font-bold text-dark-bg uppercase tracking-wider mb-2">Email Address</label>
@@ -105,7 +136,12 @@ export default function LoginPage() {
 					</div>
 
 					<div>
-						<label className="block text-xs font-bold text-dark-bg uppercase tracking-wider mb-2">Password</label>
+						<div className="flex justify-between items-center mb-2">
+							<label className="block text-xs font-bold text-dark-bg uppercase tracking-wider">Password</label>
+							<Link href="/forgot-password" className="text-xs font-bold text-red-600 hover:underline transition-all">
+								Forgot password?
+							</Link>
+						</div>
 						<input
 							{...register("password")}
 							type="password"
