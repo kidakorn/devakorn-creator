@@ -4,33 +4,39 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Stripe from "stripe";
 
-// 🟢 แก้เส้นแดงด้วยการใช้ as any เพื่อบอก TypeScript ให้ผ่านไปได้เลย
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 	apiVersion: "2023-10-16" as any,
 });
 
 export async function POST(req: Request) {
 	try {
-		// 1. เช็คว่าลูกค้าล็อกอินอยู่ไหม
+		// 1. ตรวจสอบ Session
 		const session = await getServerSession(authOptions);
 		if (!session?.user?.email) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		// 2. รับรหัส priceId ที่หน้าบ้านส่งมาให้
+		// 2. รับยอดเงินจากหน้าบ้าน
 		const body = await req.json();
-		const { priceId } = body;
+		const { amount } = body;
 
-		if (!priceId) {
-			return NextResponse.json({ error: "Price ID is required" }, { status: 400 });
+		if (!amount || amount < 30) {
+			return NextResponse.json({ error: "Minimum amount is 30 THB" }, { status: 400 });
 		}
 
-		// 3. สร้างหน้าชำระเงินของ Stripe
+		// 3. สร้างหน้าชำระเงิน
 		const stripeSession = await stripe.checkout.sessions.create({
 			payment_method_types: ["card", "promptpay"],
 			line_items: [
 				{
-					price: priceId,
+					price_data: {
+						currency: "thb",
+						product_data: {
+							name: "DEVAKORN AI Coins",
+							description: `Top up for ${amount * 10} Coins + Bonus`,
+						},
+						unit_amount: Math.round(amount * 100), // แปลงเป็นสตางค์
+					},
 					quantity: 1,
 				},
 			],
@@ -39,11 +45,11 @@ export async function POST(req: Request) {
 			cancel_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/pricing?canceled=true`,
 			customer_email: session.user.email,
 			metadata: {
-				userId: (session.user as any).id, // 🟢 แอบแนบ ID ลูกค้าไปกับบิลด้วย
+				userEmail: session.user.email, // ส่ง Email เพื่อความแม่นยำในการค้นหาบัญชี
+				topupAmount: amount.toString(),
 			},
 		});
 
-		// 4. ส่ง URL หน้าจ่ายเงินกลับไปให้หน้าบ้าน
 		return NextResponse.json({ url: stripeSession.url });
 
 	} catch (error: any) {

@@ -24,7 +24,8 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		const COST_PER_PROMPT = 2;
+		// 🟢 อัปเดตราคาเป็น 10 Coins
+		const COST_PER_PROMPT = 10;
 		if (user.coinBalance < COST_PER_PROMPT) {
 			return NextResponse.json({ status: "error", message: "Not enough coins! Please top up." }, { status: 403 });
 		}
@@ -64,16 +65,24 @@ export async function POST(req: Request) {
 
 		const generatedText = (response.data as any).candidates[0].content.parts[0].text.trim();
 
-		// 🛡️ เริ่มระบบ Transaction เพื่อหักเหรียญและจดบัญชีพร้อมกัน
-		const [updatedUser, ledgerEntry] = await prisma.$transaction([
+		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
 
-			// 1. หักเหรียญลูกค้า
 			prisma.user.update({
 				where: { id: user.id },
 				data: { coinBalance: { decrement: COST_PER_PROMPT } }
 			}),
 
-			// 2. จดบัญชีลงระบบ
+			prisma.generatedAsset.create({
+				data: {
+					userId: user.id,
+					type: "PROMPT",
+					prompt: idea, // ไอเดียตั้งต้นของลูกค้า
+					category: category || "None",
+					outputUrl: generatedText, // เก็บข้อความที่ AI แต่งให้แล้วไว้ในช่องนี้
+					aspectRatio: "TEXT"
+				}
+			}),
+
 			prisma.transaction.create({
 				data: {
 					userId: user.id,

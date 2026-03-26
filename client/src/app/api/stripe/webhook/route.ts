@@ -9,13 +9,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 export async function POST(req: Request) {
 	try {
-		console.log("--- 🕵️‍♂️ Starting Webhook Receiver ---");
+		console.log("--- Starting Webhook Receiver (Fixed Email Metadata) ---");
 
 		const payload = await req.text();
 		const signature = req.headers.get("stripe-signature");
 
 		if (!signature) {
-			console.log("❌ Error: Missing Signature");
+			console.log("Error: Missing Signature");
 			return new NextResponse("No signature", { status: 400 });
 		}
 
@@ -28,61 +28,65 @@ export async function POST(req: Request) {
 				process.env.STRIPE_WEBHOOK_SECRET || ""
 			);
 		} catch (err: any) {
-			console.error("❌ Signature verification failed:", err.message);
+			console.error("Signature verification failed:", err.message);
 			return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
 		}
 
 		if (event.type === "checkout.session.completed") {
 			const session = event.data.object as Stripe.Checkout.Session;
 
-			const userEmail = session.customer_details?.email || session.customer_email;
-			const amountTotal = session.amount_total ? session.amount_total / 100 : 0;
-			// 🟢 ใช้ session.id เป็นรหัสบิลอ้างอิง เพื่อป้องกันการรันซ้ำ
+			// 1. ดึง Email และ Amount จาก Metadata
+			const userEmail = session.metadata?.userEmail || session.customer_details?.email || session.customer_email;
+			const amountTHB = parseInt(session.metadata?.topupAmount || "0");
 			const referenceId = session.id;
 
-			console.log(`💰 Payment successful: ${amountTotal} THB | Email: ${userEmail || "No Email found"}`);
+			console.log(`Payment successful: THB ${amountTHB} | Email: ${userEmail}`);
 
-			let coinsToAdd = 0;
-			if (amountTotal === 50) coinsToAdd = 150;
-			else if (amountTotal === 149) coinsToAdd = 500;
-			else if (amountTotal === 499) coinsToAdd = 2200;
-			else if (amountTotal === 999) coinsToAdd = 6000;
+			if (userEmail && amountTHB > 0) {
+				// 2. คำนวณเหรียญและโบนัส
+				const baseCoins = amountTHB * 10;
+				let bonusPercent = 0;
 
-			if (userEmail && coinsToAdd > 0) {
+				if (amountTHB >= 999) bonusPercent = 15;
+				else if (amountTHB >= 499) bonusPercent = 10;
+				else if (amountTHB >= 199) bonusPercent = 5;
+
+				const bonusCoins = Math.floor(baseCoins * (bonusPercent / 100));
+				const totalCoinsToAdd = baseCoins + bonusCoins;
+
 				try {
-					// 🟢 1. อัปเดตเหรียญให้ลูกค้า และดึงข้อมูล User ล่าสุดกลับมา
+					// 3. ค้นหา User ด้วย Email และอัปเดตเหรียญ
 					const updatedUser = await prisma.user.update({
 						where: { email: userEmail },
-						data: { coinBalance: { increment: coinsToAdd } },
+						data: { coinBalance: { increment: totalCoinsToAdd } },
 					});
 
-					// 🟢 2. สร้างบันทึกประวัติ (Transaction History)
 					await prisma.transaction.create({
 						data: {
 							userId: updatedUser.id,
-							type: 'TOPUP', // ประเภทการเติมเงิน
-							amount: coinsToAdd, // จำนวนเหรียญที่ได้
-							balanceAfter: updatedUser.coinBalance, // ยอดคงเหลือล่าสุด
-							description: `Top-up: ${amountTotal} THB package`, // รายละเอียดบิล
-							referenceId: referenceId, // รหัสบิลอ้างอิงจาก Stripe
-							status: 'COMPLETED' // สถานะสำเร็จ
+							type: 'TOPUP',
+							amount: totalCoinsToAdd,
+							balanceAfter: updatedUser.coinBalance,
+							description: `Top-up: THB ${amountTHB} (+${bonusPercent}% Bonus)`,
+							referenceId: referenceId,
+							status: 'COMPLETED'
 						}
 					});
 
-					console.log(`🎉 Success!! Added ${coinsToAdd} coins and recorded transaction for Email: ${userEmail}`);
+					console.log(`Success! Added ${totalCoinsToAdd} coins to ${userEmail}`);
 				} catch (dbError) {
-					console.error("❌ Database error while adding coins/transaction:", dbError);
+					console.error("Database error while adding coins:", dbError);
 				}
 			} else {
-				console.log("⚠️ Coins not added: Missing Email or price doesn't match packages");
+				console.log("Warning: Coins not added. Missing Email or Invalid Amount");
 			}
 		}
 
-		console.log("--- 🏁 Webhook processing completed ---");
+		console.log("--- Webhook processing completed ---");
 		return new NextResponse("Webhook received", { status: 200 });
 
 	} catch (error: any) {
-		console.error("🔥 CRITICAL ERROR detected:", error);
+		console.error("CRITICAL ERROR detected:", error);
 		return new NextResponse(`Server Error: ${error.message}`, { status: 500 });
 	}
 }

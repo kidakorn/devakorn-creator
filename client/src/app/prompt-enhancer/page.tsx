@@ -76,8 +76,8 @@ export default function PromptEnhancerPage() {
 		setTimeout(() => setIsCopied(false), 2000);
 	};
 
-	// 🟢 เพิ่มเงื่อนไข isBanned เข้าไปเพื่อให้ปุ่ม Disabled
-	const isButtonDisabled = isEnhancing || !idea || currentCoins < 2 || isBanned;
+	// 🟢 เปลี่ยนเงื่อนไขจาก 2 เป็น 10 Coins
+	const isButtonDisabled = isEnhancing || !idea || currentCoins < 10 || isBanned;
 
 	return (
 		<DashboardLayout>
@@ -157,12 +157,12 @@ export default function PromptEnhancerPage() {
 										</>
 									) : isBanned ? (
 										'Suspended'
-									) : currentCoins < 2 ? (
-										'Insufficient Coins (2 Coins)'
+									) : currentCoins < 10 ? ( // 🟢 เปลี่ยนการแจ้งเตือน
+										'Insufficient Coins (10 Coins)'
 									) : (
 										<>
 											<Wand2 className="w-4 h-4" />
-											Enhance Prompt (-2 Coins)
+											Enhance Prompt (-10 Coins) {/* 🟢 เปลี่ยนปุ่ม */}
 										</>
 									)}
 								</button>

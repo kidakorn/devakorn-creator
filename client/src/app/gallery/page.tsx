@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw, FileText } from "lucide-react";
 
 interface Asset {
 	id: string;
@@ -18,6 +18,8 @@ export default function GalleryPage() {
 	const [assets, setAssets] = useState<Asset[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
+	// 🟢 เพิ่ม State สำหรับจัดการ Tab
+	const [activeTab, setActiveTab] = useState("IMAGE");
 
 	const fetchAssets = async () => {
 		setLoading(true);
@@ -34,12 +36,10 @@ export default function GalleryPage() {
 		}
 	};
 
-	// 🟢 ฟังก์ชันอัจฉริยะ: เช็คว่าเป็น URL หรือ Base64
 	const getAssetSrc = (asset: Asset) => {
 		if (asset.outputUrl.startsWith('http')) {
-			return asset.outputUrl; // เป็นลิงก์ URL ของใหม่ (Cloudinary)
+			return asset.outputUrl;
 		}
-		// เป็นของเก่าที่เก็บแบบ Base64
 		const mimeType = asset.type === "IMAGE" ? "image/png" : "video/mp4";
 		return `data:${mimeType};base64,${asset.outputUrl}`;
 	};
@@ -49,12 +49,10 @@ export default function GalleryPage() {
 			let downloadUrl = '';
 
 			if (asset.outputUrl.startsWith('http')) {
-				// ถ้าเป็น URL ดึงข้อมูลมาแปลงเป็นไฟล์ก่อนโหลด (ป้องกันเบราว์เซอร์เปิดแท็บใหม่)
 				const response = await fetch(asset.outputUrl);
 				const blob = await response.blob();
 				downloadUrl = window.URL.createObjectURL(blob);
 			} else {
-				// ถ้าเป็น Base64 ให้โหลดได้เลย
 				downloadUrl = getAssetSrc(asset);
 			}
 
@@ -66,11 +64,10 @@ export default function GalleryPage() {
 			document.body.removeChild(link);
 
 			if (asset.outputUrl.startsWith('http')) {
-				window.URL.revokeObjectURL(downloadUrl); // คืนพื้นที่หน่วยความจำ
+				window.URL.revokeObjectURL(downloadUrl);
 			}
 		} catch (error) {
 			console.error("Download failed, opening in new tab", error);
-			// ท่าสำรองถ้าโหลดพัง
 			window.open(getAssetSrc(asset), '_blank');
 		}
 	};
@@ -85,10 +82,14 @@ export default function GalleryPage() {
 		fetchAssets();
 	}, []);
 
+	// 🟢 ฟิลเตอร์ Asset ตาม Tab ที่เลือก
+	const filteredAssets = assets.filter(asset => asset.type === activeTab);
+
 	return (
 		<DashboardLayout>
-			<div className="p-8 max-w-7xl mx-auto">
-				<div className="flex justify-between items-center mb-8">
+			<div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
 					<div>
 						<h1 className="text-3xl font-black text-dark-bg tracking-tight">My Creations</h1>
 						<p className="text-text-main/50 font-medium">Manage and reuse your commercial product assets.</p>
@@ -96,10 +97,32 @@ export default function GalleryPage() {
 					<button
 						onClick={fetchAssets}
 						disabled={loading}
-						className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-500 hover:text-primary-red hover:border-primary-red/30 hover:bg-red-50 transition-all shadow-sm disabled:opacity-50"
+						className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-primary-red hover:border-primary-red/30 hover:bg-red-50 transition-all shadow-sm disabled:opacity-50"
 					>
 						<RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
 						<span className="text-xs font-bold">{loading ? 'Updating...' : 'Refresh'}</span>
+					</button>
+				</div>
+
+				{/* 🟢 Tabs (Images / Videos / Prompts) */}
+				<div className="flex gap-2 border-b border-gray-200 pb-px">
+					<button
+						onClick={() => setActiveTab("IMAGE")}
+						className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "IMAGE" ? "border-primary-red text-primary-red" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+					>
+						<ImageIcon className="w-4 h-4" /> Images
+					</button>
+					<button
+						onClick={() => setActiveTab("VIDEO")}
+						className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "VIDEO" ? "border-primary-red text-primary-red" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+					>
+						<Video className="w-4 h-4" /> Videos
+					</button>
+					<button
+						onClick={() => setActiveTab("PROMPT")}
+						className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "PROMPT" ? "border-primary-red text-primary-red" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+					>
+						<FileText className="w-4 h-4" /> Prompts
 					</button>
 				</div>
 
@@ -108,65 +131,98 @@ export default function GalleryPage() {
 						<Loader2 className="w-10 h-10 animate-spin text-primary-red mb-4" />
 						<p className="text-text-main/50 font-bold">Loading your assets...</p>
 					</div>
-				) : assets.length > 0 ? (
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-						{assets.map((asset) => (
-							<div key={asset.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
+				) : filteredAssets.length > 0 ? (
 
-								<div className="aspect-square bg-light-gray relative overflow-hidden shrink-0">
-									{/* 🟢 เรียกใช้ฟังก์ชัน getAssetSrc ที่เราสร้างไว้ */}
-									{asset.type === "IMAGE" ? (
-										<img src={getAssetSrc(asset)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Generated asset" />
-									) : (
-										<video src={getAssetSrc(asset)} className="w-full h-full object-cover" muted loop onMouseOver={(e) => e.currentTarget.play()} onMouseOut={(e) => e.currentTarget.pause()} />
-									)}
+					/* 🟢 แยก Layout การแสดงผลตามประเภท Tab */
+					activeTab === "PROMPT" ? (
 
-									<div className="absolute top-3 right-3 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-all duration-300">
-										<button
-											onClick={() => handleDownload(asset)}
-											className="p-2.5 bg-white text-dark-bg rounded-xl shadow-lg hover:bg-primary-red hover:text-white transition-all"
-											title="Download"
-										>
-											<Download className="w-4 h-4" />
-										</button>
-										<button
-											onClick={() => copyPrompt(asset.id, asset.prompt)}
-											className="p-2.5 bg-white text-dark-bg rounded-xl shadow-lg hover:bg-dark-bg hover:text-white transition-all"
-											title="Copy Prompt"
-										>
-											{copiedId === asset.id ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-										</button>
+						/* 👉 Layout สำหรับ Prompts (แนวนอนเรียงลงมา) */
+						<div className="flex flex-col gap-5">
+							{filteredAssets.map((asset) => (
+								<div key={asset.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-6">
+									<div className="flex-1">
+										<p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Original Idea</p>
+										<p className="text-sm text-gray-500 italic">"{asset.prompt}"</p>
+										<div className="mt-4 pt-4 border-t border-gray-100">
+											<p className="text-[10px] font-black text-primary-red uppercase tracking-widest mb-2">Enhanced Output</p>
+											<p className="text-sm font-medium text-gray-900 leading-relaxed">{asset.outputUrl}</p>
+										</div>
 									</div>
-
-									<div className="absolute bottom-3 left-3">
-										<span className="text-[9px] font-black px-2 py-1 rounded-md bg-black/50 text-white backdrop-blur-sm uppercase">
-											{asset.type}
-										</span>
-									</div>
-								</div>
-
-								<div className="p-5 flex flex-col flex-1">
-									<div className="mb-4">
-										<span className="text-[10px] font-bold text-primary-red uppercase tracking-wider bg-primary-red/5 px-2 py-1 rounded">
+									<div className="flex flex-col justify-between items-start sm:items-end sm:w-56 shrink-0 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6">
+										<span className="text-[10px] font-bold text-primary-red uppercase tracking-wider bg-primary-red/5 px-3 py-1.5 rounded-md mb-4">
 											{asset.category || "General"}
 										</span>
-									</div>
-									<p className="text-xs text-dark-bg font-medium leading-relaxed line-clamp-4 flex-1">
-										{asset.prompt}
-									</p>
-									<div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center text-[10px] text-text-main/40 font-bold">
-										<span>ID: {asset.id.slice(-6).toUpperCase()}</span>
-										<span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+										<button
+											onClick={() => copyPrompt(asset.id, asset.outputUrl)}
+											className="w-full sm:w-auto px-4 py-2.5 bg-gray-50 text-gray-700 hover:bg-dark-bg hover:text-white rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 font-bold text-xs"
+										>
+											{copiedId === asset.id ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+											{copiedId === asset.id ? 'Copied!' : 'Copy Prompt'}
+										</button>
+										<p className="text-[10px] text-gray-400 font-bold mt-4">
+											ID: {asset.id.slice(-6).toUpperCase()} • {new Date(asset.createdAt).toLocaleDateString()}
+										</p>
 									</div>
 								</div>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+
+					) : (
+
+						/* 👉 Layout สำหรับ Images & Videos (Grid แบบเดิม) */
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+							{filteredAssets.map((asset) => (
+								<div key={asset.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
+									<div className="aspect-square bg-light-gray relative overflow-hidden shrink-0">
+										{asset.type === "IMAGE" ? (
+											<img src={getAssetSrc(asset)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Generated asset" />
+										) : (
+											<video src={getAssetSrc(asset)} className="w-full h-full object-cover" muted loop onMouseOver={(e) => e.currentTarget.play()} onMouseOut={(e) => e.currentTarget.pause()} />
+										)}
+
+										<div className="absolute top-3 right-3 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-all duration-300">
+											<button
+												onClick={() => handleDownload(asset)}
+												className="p-2.5 bg-white text-dark-bg rounded-xl shadow-lg hover:bg-primary-red hover:text-white transition-all"
+												title="Download"
+											>
+												<Download className="w-4 h-4" />
+											</button>
+											<button
+												onClick={() => copyPrompt(asset.id, asset.prompt)}
+												className="p-2.5 bg-white text-dark-bg rounded-xl shadow-lg hover:bg-dark-bg hover:text-white transition-all"
+												title="Copy Prompt"
+											>
+												{copiedId === asset.id ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+											</button>
+										</div>
+									</div>
+
+									<div className="p-5 flex flex-col flex-1">
+										<div className="mb-4">
+											<span className="text-[10px] font-bold text-primary-red uppercase tracking-wider bg-primary-red/5 px-2 py-1 rounded">
+												{asset.category || "General"}
+											</span>
+										</div>
+										<p className="text-xs text-dark-bg font-medium leading-relaxed line-clamp-4 flex-1">
+											{asset.prompt}
+										</p>
+										<div className="mt-5 pt-4 border-t border-gray-100 flex justify-between items-center text-[10px] text-text-main/40 font-bold">
+											<span>ID: {asset.id.slice(-6).toUpperCase()}</span>
+											<span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+					)
 				) : (
 					<div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">
-						<ImageIcon className="w-16 h-16 mx-auto text-light-gray mb-4" />
-						<h3 className="text-xl font-bold text-dark-bg">Start your production</h3>
-						<p className="text-text-main/40 font-medium mt-1">Generated assets will appear here.</p>
+						{activeTab === "IMAGE" && <ImageIcon className="w-16 h-16 mx-auto text-light-gray mb-4" />}
+						{activeTab === "VIDEO" && <Video className="w-16 h-16 mx-auto text-light-gray mb-4" />}
+						{activeTab === "PROMPT" && <FileText className="w-16 h-16 mx-auto text-light-gray mb-4" />}
+						<h3 className="text-xl font-bold text-dark-bg">No {activeTab.toLowerCase()}s found</h3>
+						<p className="text-text-main/40 font-medium mt-1">Go generate some amazing content!</p>
 					</div>
 				)}
 			</div>

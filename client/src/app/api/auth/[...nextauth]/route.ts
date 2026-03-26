@@ -34,6 +34,12 @@ export const authOptions: NextAuthOptions = {
 				if (!user || !user.password) {
 					throw new Error("Invalid email or password");
 				}
+
+				// 🟢 1. ดักจับคนที่โดนแบน สำหรับการล็อกอินด้วย Email/Password
+				if (user.isBanned) {
+					throw new Error("Account Suspended: Your account has been banned.");
+				}
+
 				const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 				if (!isPasswordValid) {
 					throw new Error("Invalid email or password");
@@ -51,7 +57,7 @@ export const authOptions: NextAuthOptions = {
 	],
 
 	callbacks: {
-		// 🟢 1. ดักจับการล็อกอิน ถ้าโดนแบนให้เตะกลับ
+		// 🟢 2. ดักจับคนที่โดนแบน สำหรับการล็อกอินด้วย Google (OAuth)
 		async signIn({ user }) {
 			if (user?.email) {
 				const dbUser = await prisma.user.findUnique({
@@ -59,7 +65,7 @@ export const authOptions: NextAuthOptions = {
 					select: { isBanned: true }
 				});
 				if (dbUser?.isBanned) {
-					return "/login?error=banned"; // ส่ง parameter กลับไปหน้าล็อกอิน
+					return "/login?error=banned"; // เตะกลับไปหน้าล็อกอินพร้อมแนบ Error
 				}
 			}
 			return true;

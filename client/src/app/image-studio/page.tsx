@@ -37,8 +37,8 @@ export default function ImageStudio() {
 	// ดึงสถานะการแบนจาก API เดียวกับที่ดึงเหรียญ
 	const isBanned = balanceData?.isBanned ?? false;
 
-	// นำ isBanned มาใช้เป็นเงื่อนไขในการปิดปุ่มด้วย
-	const isButtonDisabled = isGenerating || !prompt || currentCoins < 20 || isBanned;
+	// 🟢 เปลี่ยนเงื่อนไขจาก 20 เป็น 30 Coins
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 30 || isBanned;
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -263,12 +263,12 @@ export default function ImageStudio() {
 											</>
 										) : isBanned ? (
 											'Suspended'
-										) : currentCoins < 20 ? (
-											'Insufficient Coins'
+										) : currentCoins < 30 ? ( // 🟢 เปลี่ยนการแจ้งเตือนจาก 20 เป็น 30 Coins
+											'Insufficient Coins (30 Coins)'
 										) : (
 											<>
 												<Sparkles className="w-4 h-4" />
-												Generate Image (-20 Coins)
+												Generate Image (-30 Coins) {/* 🟢 เปลี่ยนปุ่มจาก -20 เป็น -30 Coins */}
 											</>
 										)}
 									</button>

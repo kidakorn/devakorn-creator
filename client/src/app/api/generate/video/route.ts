@@ -34,7 +34,8 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		const COST_PER_VIDEO = 400;
+		// 🟢 เปลี่ยนจาก 400 เป็น 350
+		const COST_PER_VIDEO = 350;
 		if (user.coinBalance < COST_PER_VIDEO) {
 			return NextResponse.json({
 				status: "error",

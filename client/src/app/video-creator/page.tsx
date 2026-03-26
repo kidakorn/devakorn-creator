@@ -46,8 +46,8 @@ export default function VideoCreatorPage() {
 	// 🟢 ดึงสถานะการแบนมาใช้งาน
 	const isBanned = balanceData?.isBanned ?? false;
 
-	// 🟢 เพิ่มเงื่อนไข isBanned เข้าไปเพื่อให้ปุ่ม Disabled
-	const isButtonDisabled = isGenerating || !prompt || currentCoins < 400 || isBanned;
+	// 🟢 เปลี่ยนจาก 400 เป็น 350
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < 350 || isBanned;
 
 	const handleGenerate = async () => {
 		if (isBanned) return alert("Your account has been suspended.");
@@ -225,12 +225,12 @@ export default function VideoCreatorPage() {
 									</>
 								) : isBanned ? (
 									'Suspended'
-								) : currentCoins < 400 ? (
-									'Insufficient Coins (400 Coins)'
+								) : currentCoins < 350 ? ( // 🟢 เปลี่ยนจาก 400 เป็น 350
+									'Insufficient Coins (350 Coins)'
 								) : (
 									<>
 										<Play className="w-5 h-5 fill-current" />
-										Generate Video Ad (-400 Coins)
+										Generate Video Ad (-350 Coins) {/* 🟢 เปลี่ยนจาก -400 เป็น -350 */}
 									</>
 								)}
 							</button>

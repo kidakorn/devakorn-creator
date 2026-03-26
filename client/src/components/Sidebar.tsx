@@ -7,8 +7,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
-	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck, // 🟢 เพิ่มไอคอน ShieldCheck
-	User
+	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck,
+	User, Eye // 🟢 เพิ่มไอคอน Eye
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
@@ -30,6 +30,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 
 	return (
 		<aside
+			// 🟢 ใช้โครงสร้าง CSS เดิมของบอส 100%
 			className={`relative bg-gray-150 border-r border-gray-300 flex flex-col transition-all duration-300 ease-in-out z-20 shrink-0 ${isOpen ? 'w-64' : 'w-20'}`}
 		>
 			<button
@@ -91,6 +92,20 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 						>
 							<ShieldCheck className="w-5 h-5 shrink-0" />
 							{isOpen && <span className="whitespace-nowrap">Admin Panel</span>}
+						</Link>
+
+						{/* 👁️ ปุ่มไปหน้า Content Moderation (ที่เพิ่มเข้ามาใหม่) */}
+						<Link
+							href="/admin/gallery"
+							title={!isOpen ? "Moderation" : undefined}
+							className={`flex items-center rounded-lg font-medium transition-all ${isOpen ? 'px-4 py-2.5 gap-3' : 'justify-center py-3'
+								} ${pathname === "/admin/gallery"
+									? "bg-primary-red/10 text-primary-red font-bold"
+									: "text-text-main/60 hover:bg-light-gray hover:text-dark-bg"
+								}`}
+						>
+							<Eye className="w-5 h-5 shrink-0" />
+							{isOpen && <span className="whitespace-nowrap">Content Moderation</span>}
 						</Link>
 
 						{/* ⚙️ ปุ่มไปหน้า Settings */}

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
@@ -7,25 +6,34 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from "@/components/DashboardLayout";
-import { Zap, Coins, History, CreditCard, X } from "lucide-react"; // 🟢 เพิ่มไอคอน X สำหรับปิดหน้าต่าง
+import { Zap, Coins, History, CreditCard, X, CheckCircle2 } from "lucide-react";
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const packages = [
-	{ id: 'price_1TBFGYEFhFWEqseRbPqPtS1P', name: 'Mini Drop', price: 50, coins: 150, bonus: 0, popular: false },
-	{ id: 'price_1TBFH6EFhFWEqseRUwprXoMj', name: 'Starter', price: 149, coins: 500, bonus: 0, popular: false },
-	{ id: 'price_1TBFHaEFhFWEqseRovdkVX3k', name: 'Pro Creator', price: 499, coins: 2000, bonus: 200, popular: true },
-	{ id: 'price_1TBFHuEFhFWEqseR69ZBfnfh', name: 'Agency', price: 999, coins: 5000, bonus: 1000, popular: false }
+// 🟢 อัตราแลกเปลี่ยน 1 บาท = 10 เหรียญ
+const EXCHANGE_RATE = 10;
+const MIN_AMOUNT = 30;
+
+// 🟢 เทคนิคจิตวิทยาการขาย (ราคาลงท้ายด้วย 9 + แจกโบนัส)
+const PRESETS = [
+	{ amount: 39, tag: null },
+	{ amount: 59, tag: null },
+	{ amount: 99, tag: "Starter" },
+	{ amount: 199, tag: "Popular", bonusPercent: 5 }, // เริ่มแจกโบนัสที่ 199
+	{ amount: 499, tag: "Best Value", bonusPercent: 10 },
+	{ amount: 999, tag: "Max Bonus", bonusPercent: 15 },
 ];
 
 export default function WalletDashboardPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const [isLoading, setIsLoading] = useState<string | null>(null);
 
-	// 🟢 State สำหรับจัดการหน้าต่างประวัติ (History Modal)
+	const [amount, setAmount] = useState<number | "">(99); // Default ที่ 99
+	const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+	// State สำหรับ History
 	const [showHistory, setShowHistory] = useState(false);
 	const [transactions, setTransactions] = useState<any[]>([]);
 	const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -39,33 +47,54 @@ export default function WalletDashboardPage() {
 
 	useEffect(() => {
 		if (searchParams.get('success') === 'true') {
-			console.log("Payment successful, cleaning URL...");
 			router.replace('/pricing');
 		}
 	}, [searchParams, router]);
 
-	const handleCheckout = async (priceId: string) => {
+	// ฟังก์ชันคำนวณเหรียญ + โบนัส (ประมวลผลอยู่เบื้องหลัง ไม่ให้รกลูกตา)
+	const calculateCoins = (thb: number | "") => {
+		if (thb === "" || thb < MIN_AMOUNT) return { base: 0, bonus: 0, total: 0 };
+		const base = thb * EXCHANGE_RATE;
+		let bonusPercent = 0;
+		if (thb >= 999) bonusPercent = 15;
+		else if (thb >= 499) bonusPercent = 10;
+		else if (thb >= 199) bonusPercent = 5;
+
+		const bonus = Math.floor(base * (bonusPercent / 100));
+		return { base, bonus, total: base + bonus };
+	};
+
+	const coinsResult = calculateCoins(amount);
+	const isValidAmount = amount !== "" && amount >= MIN_AMOUNT;
+
+	const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const val = e.target.value;
+		if (val === "") setAmount("");
+		else setAmount(Number(val));
+	};
+
+	const handleCheckout = async () => {
+		if (!isValidAmount) return;
 		try {
-			setIsLoading(priceId);
+			setIsCheckingOut(true);
 			const response = await fetch('/api/stripe/checkout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ priceId }),
+				body: JSON.stringify({ amount: amount }), // ส่งจำนวนเงินที่กรอก/เลือก ไป
 			});
 			const data = await response.json();
 			if (data.url) {
 				window.location.href = data.url;
 			} else {
 				alert("Error: " + data.error);
-				setIsLoading(null);
+				setIsCheckingOut(false);
 			}
 		} catch (error) {
 			console.error("Checkout Error:", error);
-			setIsLoading(null);
+			setIsCheckingOut(false);
 		}
 	};
 
-	// 🟢 ฟังก์ชันดึงข้อมูลและเปิดหน้าต่าง History
 	const handleOpenHistory = async () => {
 		setShowHistory(true);
 		setIsLoadingHistory(true);
@@ -84,9 +113,10 @@ export default function WalletDashboardPage() {
 
 	return (
 		<DashboardLayout>
-			<div className="min-h-screen bg-gray-50 text-gray-900 p-6 lg:p-10 font-sans">
-				<div className="max-w-5xl mx-auto space-y-12">
+			<div className="min-h-screen bg-gray-50 text-gray-900 p-6 lg:p-10 font-sans pb-20">
+				<div className="max-w-4xl mx-auto space-y-10">
 
+					{/* 🟢 Header Profile */}
 					<div className="flex items-center gap-4">
 						<div className="w-14 h-14 rounded-full bg-white shadow-sm p-1 border border-gray-200">
 							<img
@@ -103,7 +133,8 @@ export default function WalletDashboardPage() {
 						</div>
 					</div>
 
-					<div className="relative rounded-3xl p-8 lg:p-10 bg-linear-to-r from-red-600 via-red-500 to-orange-500 shadow-xl overflow-hidden group flex flex-col md:flex-row md:items-center justify-between gap-8 text-white">
+					{/* 🟢 Main Wallet Card */}
+					<div className="relative mb-8 rounded-3xl p-8 lg:p-10 bg-linear-to-r from-red-600 via-red-500 to-orange-500 shadow-xl overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8 text-white">
 						<div className="relative z-10">
 							<div className="flex items-center gap-2 text-white/90 mb-4 font-semibold tracking-wide">
 								<Coins className="w-5 h-5" /> DEVAKORN WALLET
@@ -119,11 +150,10 @@ export default function WalletDashboardPage() {
 						<div className="relative z-10 flex flex-col sm:flex-row gap-3 min-w-50">
 							<button
 								onClick={() => document.getElementById('topup-section')?.scrollIntoView({ behavior: 'smooth' })}
-								className="w-full sm:w-auto bg-white text-red-600 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 shadow-md transition-all flex justify-center items-center gap-2 active:scale-95"
+								className="w-full sm:w-auto bg-white text-red-600 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-gray-50 shadow-md transition-all active:scale-95"
 							>
 								+ Top up
 							</button>
-							{/* 🟢 เรียกใช้ handleOpenHistory เมื่อกดปุ่ม History */}
 							<button
 								onClick={handleOpenHistory}
 								className="w-full sm:w-auto bg-black/15 text-white border border-white/20 px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-black/25 transition-all flex justify-center items-center gap-2 backdrop-blur-sm active:scale-95"
@@ -133,71 +163,109 @@ export default function WalletDashboardPage() {
 						</div>
 					</div>
 
-					<div className="h-px w-full bg-gray-200 my-10" id="topup-section"></div>
-
-					<div>
-						<div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+					{/* 🟢 Top-up Section (App Store Style) */}
+					<div id="topup-section" className="bg-white rounded-3xl border border-gray-200 shadow-sm p-8 lg:p-10">
+						<div className="mb-8 flex items-center justify-between">
 							<div>
-								<h3 className="text-2xl font-bold text-gray-900 mb-2">Buy Coins</h3>
-								<p className="text-gray-500 text-sm">Select a package to top up your wallet instantly.</p>
+								<h3 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+									<Zap className="w-6 h-6 text-red-500" /> Get More Coins
+								</h3>
+								<p className="text-gray-500 font-medium mt-1">Select a package or enter a custom amount.</p>
 							</div>
 						</div>
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-							{packages.map((pkg) => (
-								<div
-									key={pkg.id}
-									className={`relative rounded-3xl p-6 bg-white transition-all duration-300 flex flex-col group cursor-pointer ${pkg.popular
-										? 'border-2 border-red-500 shadow-lg lg:-translate-y-1'
-										: 'border border-gray-200 hover:border-red-300 hover:shadow-md'
-										}`}
-									onClick={() => handleCheckout(pkg.id)}
-								>
-									<div className="flex-1">
-										<div className="flex justify-between items-start mb-6">
-											<h3 className="text-gray-900 font-bold text-lg">{pkg.name}</h3>
-											<div className={`p-2 rounded-xl ${pkg.popular ? 'bg-red-50 text-red-500' : 'bg-gray-50 text-gray-400'}`}>
-												<Coins className="w-5 h-5" />
-											</div>
-										</div>
-										<div className="mb-8">
-											<span className="text-4xl font-black text-gray-900 tracking-tight">฿{pkg.price}</span>
-										</div>
-										<div className="space-y-3 mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-											<div className="flex items-center justify-between text-sm">
-												<span className="text-gray-500 font-medium">Coins</span>
-												<span className="font-bold text-gray-900 text-base">{pkg.coins.toLocaleString()}</span>
-											</div>
-										</div>
-									</div>
-
+						{/* Grid แพ็กเกจ */}
+						<div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+							{PRESETS.map((p) => {
+								const result = calculateCoins(p.amount);
+								const isSelected = amount === p.amount;
+								return (
 									<button
-										disabled={isLoading === pkg.id}
-										className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex justify-center items-center gap-2 ${pkg.popular
-											? 'bg-red-600 text-white hover:bg-red-700 shadow-md'
-											: 'bg-white text-gray-900 border border-gray-200 hover:border-gray-900 hover:bg-gray-50'
-											}`}
+										key={p.amount}
+										onClick={() => setAmount(p.amount)}
+										className={`relative p-5 rounded-2xl border-2 text-left transition-all overflow-hidden group
+											${isSelected ? 'border-red-500 bg-red-50/50' : 'border-gray-100 bg-white hover:border-red-200 hover:shadow-md'}`}
 									>
-										{isLoading === pkg.id ? (
-											<div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-										) : (
-											<>
-												<CreditCard className="w-4 h-4" /> Buy Now
-											</>
+										{/* Tag กระตุ้นการขาย */}
+										{p.tag && (
+											<div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-bl-xl
+												${isSelected ? 'bg-red-500 text-white' : 'bg-gray-900 text-white'}`}>
+												{p.tag}
+											</div>
+										)}
+
+										<div className={`text-sm font-bold mb-1 ${isSelected ? 'text-red-500' : 'text-gray-400'}`}>
+											฿ {p.amount}
+										</div>
+										<div className="flex items-baseline gap-1">
+											<span className={`text-2xl font-black ${isSelected ? 'text-red-600' : 'text-gray-900'}`}>
+												{result.total.toLocaleString()}
+											</span>
+											<span className="text-xs font-bold text-gray-500">Coins</span>
+										</div>
+
+										{/* ข้อความ Bonus เล็กๆ */}
+										{result.bonus > 0 && (
+											<div className="mt-2 text-xs font-bold text-green-500 flex items-center gap-1">
+												<CheckCircle2 className="w-3 h-3" /> +{result.bonus} Bonus
+											</div>
 										)}
 									</button>
-								</div>
-							))}
+								);
+							})}
 						</div>
+
+						{/* ช่องกรอกจำนวนเงินแบบ Custom แบบมินิมอล */}
+						<div className="p-1">
+							<div className="relative flex items-center bg-gray-50 rounded-2xl border border-gray-200 focus-within:border-red-500 focus-within:bg-white transition-all overflow-hidden">
+								<div className="px-5 font-bold text-gray-500 whitespace-nowrap bg-gray-100 border-r border-gray-200 h-full flex items-center py-4">
+									Custom ฿
+								</div>
+								<input
+									type="number"
+									min={MIN_AMOUNT}
+									value={amount}
+									onChange={handleAmountChange}
+									className="flex-1 bg-transparent py-4 px-4 text-xl font-black text-gray-900 outline-none w-full"
+									placeholder={`Min. ${MIN_AMOUNT}`}
+								/>
+								<div className="px-5 font-black text-red-600 text-xl whitespace-nowrap hidden sm:block">
+									= {coinsResult.total.toLocaleString()} Coins
+								</div>
+							</div>
+							{!isValidAmount && amount !== "" && (
+								<p className="text-red-500 text-xs font-bold mt-2 ml-2">Minimum amount is ฿{MIN_AMOUNT}.</p>
+							)}
+						</div>
+
+						{/* ปุ่ม Checkout แนวนอนใหญ่ๆ เน้นๆ */}
+						<button
+							onClick={handleCheckout}
+							disabled={!isValidAmount || isCheckingOut}
+							className={`w-full mt-8 py-4 rounded-2xl font-black text-lg transition-all flex justify-center items-center gap-3 shadow-lg
+								${isValidAmount && !isCheckingOut
+									? "bg-red-600 text-white hover:bg-red-700 hover:shadow-xl hover:-translate-y-1 active:scale-95"
+									: "bg-gray-200 text-gray-400 cursor-not-allowed"
+								}`}
+						>
+							{isCheckingOut ? (
+								<div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+							) : (
+								<>
+									<CreditCard className="w-6 h-6" />
+									Pay ฿{amount || 0} to get {coinsResult.total.toLocaleString()} Coins
+								</>
+							)}
+						</button>
+
 					</div>
 				</div>
 			</div>
 
-			{/* 🟢 Modal หน้าต่างโชว์ประวัติการเติมเงิน */}
+			{/* 🟢 Modal History (เหมือนเดิมเป๊ะ) */}
 			{showHistory && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
 					<div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
-						{/* Header ของ Modal */}
 						<div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
 							<h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
 								<History className="w-5 h-5 text-red-500" /> Transaction History
@@ -210,7 +278,6 @@ export default function WalletDashboardPage() {
 							</button>
 						</div>
 
-						{/* Body ของ Modal โชว์รายการ */}
 						<div className="p-6 overflow-y-auto flex-1 bg-gray-50/30">
 							{isLoadingHistory ? (
 								<div className="flex flex-col items-center justify-center py-12">

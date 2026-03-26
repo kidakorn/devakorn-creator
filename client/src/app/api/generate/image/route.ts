@@ -37,7 +37,8 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		const COST_PER_IMAGE = 20;
+		// 🟢 อัปเดตราคาเป็น 30 Coins ตามแผนใหม่
+		const COST_PER_IMAGE = 30;
 		if (user.coinBalance < COST_PER_IMAGE) {
 			return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
 		}
