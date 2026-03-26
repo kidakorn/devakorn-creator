@@ -26,7 +26,6 @@ export async function POST(req: Request) {
 		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 		if (!user) return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
 
-		// 🟢 บล็อกบัญชีที่โดนแบน ไม่ให้ทำงานต่อ
 		if (user.isBanned) {
 			return NextResponse.json({
 				status: "error",
@@ -34,7 +33,6 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 เปลี่ยนจาก 400 เป็น 350
 		const COST_PER_VIDEO = 350;
 		if (user.coinBalance < COST_PER_VIDEO) {
 			return NextResponse.json({
@@ -48,25 +46,28 @@ export async function POST(req: Request) {
 
 		const finalPrompt = `Commercial Video Style: ${category}. High-quality product showcase, sharp focus, cinematic lighting. ${prompt}`;
 
+		// โค้ดดึงการตั้งค่าเพื่อรองรับโมเดล Veo เวอร์ชั่นใหม่ๆ ในอนาคต
+		const apiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'GOOGLE_API_KEY' } });
+
 		const client = new GoogleGenAI({ vertexai: true, project: 'devakorn-creator-ai', location: 'us-central1' });
 		const storage = new Storage();
 
-		console.log("🎬 [1/3] Submitting video job to Veo AI...");
+		console.log("[1/3] Submitting video job to Veo AI...");
 		let operation = await client.models.generateVideos({
 			model: 'veo-3.1-generate-001',
 			prompt: finalPrompt,
 			config: { aspectRatio: aspectRatio || "16:9" }
 		});
 
-		console.log(`🎫 [2/3] Got Ticket: ${operation.name}`);
-		console.log("⏳ Waiting for AI to render (approx 1-3 mins)...");
+		console.log(`[2/3] Got Ticket: ${operation.name}`);
+		console.log("Waiting for AI to render (approx 1-3 mins)...");
 
 		while (!operation.done) {
 			await new Promise(resolve => setTimeout(resolve, 15000));
 			operation = await client.operations.get({ operation: operation });
-			console.log("🔄 Still rendering... checking again in 15 seconds.");
+			console.log("Still rendering... checking again in 15 seconds.");
 		}
-		console.log("✅ [3/3] Video generation complete!");
+		console.log("[3/3] Video generation complete!");
 
 		let videoBase64 = null;
 		const videoData = operation.response?.generatedVideos?.[0]?.video;
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
 
 		if (!videoBase64) throw new Error("Could not process the video data.");
 
-		console.log("☁️ Uploading to Cloudinary...");
+		console.log("Uploading to Cloudinary...");
 		const uploadResponse = await cloudinary.uploader.upload(
 			`data:video/mp4;base64,${videoBase64}`,
 			{
@@ -97,14 +98,12 @@ export async function POST(req: Request) {
 			}
 		);
 
-		console.log("💾 Saving to Database & Deducting Coins...");
+		console.log("Saving to Database & Deducting Coins...");
 		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
-
 			prisma.user.update({
 				where: { id: user.id },
 				data: { coinBalance: { decrement: COST_PER_VIDEO } }
 			}),
-
 			prisma.generatedAsset.create({
 				data: {
 					userId: user.id,
@@ -115,7 +114,6 @@ export async function POST(req: Request) {
 					aspectRatio: aspectRatio || "16:9"
 				}
 			}),
-
 			prisma.transaction.create({
 				data: {
 					userId: user.id,

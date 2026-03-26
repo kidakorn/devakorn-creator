@@ -29,7 +29,6 @@ export async function POST(req: Request) {
 			return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
 		}
 
-		// บล็อกบัญชีที่โดนแบน ไม่ให้ทำงานต่อ
 		if (user.isBanned) {
 			return NextResponse.json({
 				status: "error",
@@ -37,7 +36,6 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 อัปเดตราคาเป็น 30 Coins ตามแผนใหม่
 		const COST_PER_IMAGE = 30;
 		if (user.coinBalance < COST_PER_IMAGE) {
 			return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
@@ -58,6 +56,10 @@ export async function POST(req: Request) {
 			finalPrompt = `Commercial Product Asset Style: ${category}. ${rawPrompt}. Highly detailed, professional studio quality.`;
 		}
 
+		// ดึงการตั้งค่าโมเดลจาก Database
+		const defaultModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'DEFAULT_AI_MODEL' } });
+		const selectedModel = defaultModelSetting?.value || 'imagen-3.0-generate-001';
+
 		const auth = new GoogleAuth({
 			scopes: ['https://www.googleapis.com/auth/cloud-platform'],
 		});
@@ -65,7 +67,8 @@ export async function POST(req: Request) {
 		const projectId = 'devakorn-creator-ai';
 		const location = 'us-central1';
 
-		const model = file ? 'imagen-3.0-capability-001' : 'imagen-3.0-generate-001';
+		// ใช้โมเดลที่เลือกจากหน้า Settings
+		const model = file ? 'imagen-3.0-capability-001' : selectedModel;
 		const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:predict`;
 
 		const instanceData: any = { prompt: finalPrompt };
@@ -113,12 +116,10 @@ export async function POST(req: Request) {
 		);
 
 		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
-
 			prisma.user.update({
 				where: { id: user.id },
 				data: { coinBalance: { decrement: COST_PER_IMAGE } }
 			}),
-
 			prisma.generatedAsset.create({
 				data: {
 					userId: user.id,
@@ -129,7 +130,6 @@ export async function POST(req: Request) {
 					aspectRatio: aspectRatio
 				}
 			}),
-
 			prisma.transaction.create({
 				data: {
 					userId: user.id,

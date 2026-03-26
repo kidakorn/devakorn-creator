@@ -139,4 +139,9 @@ model PasswordResetToken {
   @@unique([email, token])
 }
 
-
+model SystemSetting {
+  id        String   @id @default(cuid()) @map("_id") // ถ้าใช้ MongoDB ให้ใส่ @map("_id") ถ้าไม่ใช่ให้ลบออกได้ครับ
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

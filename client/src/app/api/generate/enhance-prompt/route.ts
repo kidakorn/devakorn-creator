@@ -16,7 +16,6 @@ export async function POST(req: Request) {
 		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 		if (!user) return NextResponse.json({ status: "error", message: "User not found." }, { status: 404 });
 
-		// 🟢 ด่านป้องกัน: บล็อกบัญชีที่โดนแบน ไม่ให้ทำงานต่อ
 		if (user.isBanned) {
 			return NextResponse.json({
 				status: "error",
@@ -24,7 +23,6 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 อัปเดตราคาเป็น 10 Coins
 		const COST_PER_PROMPT = 10;
 		if (user.coinBalance < COST_PER_PROMPT) {
 			return NextResponse.json({ status: "error", message: "Not enough coins! Please top up." }, { status: 403 });
@@ -33,6 +31,9 @@ export async function POST(req: Request) {
 		const { idea, category } = await req.json();
 		if (!idea) return NextResponse.json({ status: "error", message: "Idea is required." }, { status: 400 });
 
+        // ดึงการตั้งค่า API Key จากระบบหลังบ้าน
+        const apiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'GOOGLE_API_KEY' } });
+
 		const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
 		const client = await auth.getClient();
 		const projectId = 'devakorn-creator-ai';
@@ -40,7 +41,6 @@ export async function POST(req: Request) {
 		const model = 'gemini-2.0-flash-001';
 		const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 
-		// 🟢 สั่งสอน AI ให้เก่งเรื่องการออกแบบสินค้าเชิงพาณิชย์
 		const systemInstruction = `You are an expert AI commercial product prompt engineer. Your job is to take a simple user idea and turn it into a highly detailed, professional prompt ready for a text-to-image model.
 		
         The user wants to create a commercial asset for: "${category}".
@@ -66,23 +66,20 @@ export async function POST(req: Request) {
 		const generatedText = (response.data as any).candidates[0].content.parts[0].text.trim();
 
 		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
-
 			prisma.user.update({
 				where: { id: user.id },
 				data: { coinBalance: { decrement: COST_PER_PROMPT } }
 			}),
-
 			prisma.generatedAsset.create({
 				data: {
 					userId: user.id,
 					type: "PROMPT",
-					prompt: idea, // ไอเดียตั้งต้นของลูกค้า
+					prompt: idea,
 					category: category || "None",
-					outputUrl: generatedText, // เก็บข้อความที่ AI แต่งให้แล้วไว้ในช่องนี้
+					outputUrl: generatedText,
 					aspectRatio: "TEXT"
 				}
 			}),
-
 			prisma.transaction.create({
 				data: {
 					userId: user.id,

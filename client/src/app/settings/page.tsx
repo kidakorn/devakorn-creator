@@ -1,182 +1,246 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react"; // 🟢 ดึงระบบเช็ค Session ของฝั่ง Client
-import { useRouter } from "next/navigation"; // 🟢 ดึงระบบเปลี่ยนหน้า
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
-	Key,
-	User,
-	ShieldCheck,
-	Save,
-	Sparkles,
-	RefreshCw,
-	ChevronRight
+	User, Save, Loader2, Activity, CheckCircle2, ShieldAlert, Cpu, Database, Zap
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function Settings() {
-	// 🟢 1. เรียกใช้งานสายสืบตรวจสิทธิ์
 	const { data: session, status } = useSession();
 	const router = useRouter();
 
-	const [apiKey, setApiKey] = useState("AIzaSyB***************************");
+	const [fullName, setFullName] = useState("");
+	const [businessEmail, setBusinessEmail] = useState("");
+	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
+	
+	// 🟢 เพิ่มบรรทัดนี้ครับ (ที่ผมลืมไปในรอบก่อน)
+	const [lastSynced, setLastSynced] = useState("Never");
 
-	// 🟢 2. ดักจับคนเข้าหน้าเว็บ
+	// Diagnostic States
+	const [isTesting, setIsTesting] = useState(false);
+	const [systemStatus, setSystemStatus] = useState<'idle' | 'online' | 'error'>('idle');
+	const [activeModels, setActiveModels] = useState<any[]>([]);
+	const [projectId, setProjectId] = useState("");
+
 	useEffect(() => {
 		if (status === "unauthenticated") {
-			router.push("/login"); // ยังไม่ล็อกอิน เตะไปหน้า Login
-		} else if (status === "authenticated" && (session?.user as any)?.role !== "ADMIN") {
-			router.push("/"); // ล็อกอินแล้ว แต่ไม่ใช่ ADMIN เตะไปหน้าหลัก
+			router.push("/login");
+		} else if (status === "authenticated") {
+			if ((session?.user as any)?.role === "ADMIN") {
+				fetchSettings();
+			} else {
+				router.push("/");
+				toast.error("Access Denied: Admins only.");
+			}
 		}
 	}, [status, session, router]);
 
-	const handleSave = () => {
-		setIsSaving(true);
-		setTimeout(() => setIsSaving(false), 1500);
+	const fetchSettings = async () => {
+		try {
+			const res = await fetch('/api/admin/settings');
+			const data = await res.json();
+			if (data.status === 'success') {
+				setFullName(data.user.name || "");
+				setBusinessEmail(data.user.email || "");
+				setLastSynced("Just now"); // 🟢 ใช้งานได้แล้ว
+			}
+		} catch (error) {
+			toast.error("Failed to load settings");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
-	// 🟢 3. ระหว่างกำลังเช็คสิทธิ์ ให้โชว์หน้าจอดำๆ หรือ Loading ไปก่อนเพื่อความเนียน
-	if (status === "loading" || (session?.user as any)?.role !== "ADMIN") {
-		return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+	// 🛠️ นี่คือที่มาของ handleSave ครับ เป็นฟังก์ชันภายใน Component นี้เอง
+	const handleSave = async () => {
+		setIsSaving(true);
+		const toastId = toast.loading("Saving profile...");
+		try {
+			const res = await fetch('/api/admin/settings', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: fullName, email: businessEmail })
+			});
+			const result = await res.json();
+
+			if (res.ok) {
+				toast.success(result.message || "Saved successfully", { id: toastId });
+				setLastSynced("Just now"); // 🟢 ใช้งานได้แล้ว
+			} else {
+				toast.error(result.message || "Failed to save", { id: toastId });
+			}
+		} catch (error) {
+			toast.error("Network error during save.");
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	const runDiagnostics = async () => {
+		setIsTesting(true);
+		setSystemStatus('idle');
+		try {
+			const res = await fetch(`/api/admin/test-api`);
+			const data = await res.json();
+
+			if (res.ok && data.status === "success") {
+				setSystemStatus('online');
+				setActiveModels(data.activeModels || []);
+				setProjectId(data.projectId || "Unknown");
+				toast.success("Vertex AI Connected!");
+			} else {
+				setSystemStatus('error');
+				const rawMsg = data.message || "Connection Failed";
+				const cleanMsg = typeof rawMsg === 'string' ? rawMsg.split('<')[0] : "Connection Failed";
+				toast.error(cleanMsg);
+			}
+		} catch (error) {
+			setSystemStatus('error');
+			toast.error("Network error during diagnostics.");
+		} finally {
+			setIsTesting(false);
+		}
+	};
+
+	if (status === "loading" || (status === "authenticated" && isLoading && (session?.user as any)?.role === "ADMIN")) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-[#fafafa]">
+				<Loader2 className="w-10 h-10 animate-spin text-red-600" />
+			</div>
+		);
 	}
+
+	if (status === "unauthenticated" || (session?.user as any)?.role !== "ADMIN") return null;
 
 	return (
 		<DashboardLayout>
-			<div className="max-w-4xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
-				{/* โค้ด UI ของคุณทั้งหมดเหมือนเดิมเป๊ะครับ... */}
-				{/* --- Header --- */}
-				<div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+			<div className="max-w-4xl mx-auto w-full space-y-8 animate-in fade-in duration-500 pb-12">
+
+				<div className="flex justify-between items-end">
 					<div>
-						<h1 className="text-2xl font-black text-dark-bg tracking-tight">System Settings</h1>
-						<p className="text-text-main/60 text-sm font-medium mt-1">Manage your API credentials and preference profile.</p>
+						<h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+							<Activity className="w-8 h-8 text-red-600" /> System Diagnostics
+						</h1>
+						<p className="text-gray-500 text-sm mt-1">Verify Google Cloud connection and manage your admin profile.</p>
 					</div>
-					<div className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-text-main/40 shadow-sm inline-block">
-						Last synced: Just now
+					{/* 🟢 แสดงผลเวลาที่ซิงค์ข้อมูลล่าสุด */}
+					<div className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-400 shadow-sm inline-block">
+						Last synced: {lastSynced}
 					</div>
 				</div>
 
-				{/* --- API Configuration Card --- */}
-				<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden transition-all">
-					<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex flex-wrap items-center justify-between gap-4">
+				<section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+					<div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
 						<div className="flex items-center gap-4">
-							<div className="w-10 h-10 bg-dark-bg text-white rounded-xl flex items-center justify-center shadow-lg shadow-dark-bg/20 shrink-0">
-								<Key className="w-5 h-5" />
+							<div className="w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+								<Database className="w-5 h-5" />
 							</div>
-							<div>
-								<h2 className="text-lg font-bold text-dark-bg">API Key Management</h2>
-								<p className="text-xs text-text-main/50 font-medium tracking-wide">Secure your Google AI access tokens</p>
-							</div>
+							<h2 className="text-lg font-bold text-gray-900">Vertex AI Status</h2>
 						</div>
-						<div className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
-							<ShieldCheck className="w-3 h-3" /> Encrypted
-						</div>
+						<button
+							onClick={runDiagnostics}
+							disabled={isTesting}
+							className="px-5 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition-all disabled:opacity-50 flex items-center gap-2"
+						>
+							{isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+							Run Check
+						</button>
 					</div>
 
-					<div className="p-5 sm:p-8 space-y-6 sm:space-y-8">
-						<div className="space-y-3">
-							<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-								Google Cloud API Key
-							</label>
-							<div className="relative group">
-								<input
-									type="password"
-									value={apiKey}
-									onChange={(e) => setApiKey(e.target.value)}
-									className="w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all font-mono"
-								/>
-								<div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-main/20 group-hover:text-text-main/40 transition-colors">
-									<Key className="w-4 h-4" />
+					<div className="p-6">
+						{systemStatus === 'idle' && (
+							<div className="py-12 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+								<p className="text-sm text-gray-400 font-bold tracking-wide">Press "Run Check" to verify cloud connectivity.</p>
+							</div>
+						)}
+
+						{systemStatus === 'error' && (
+							<div className="p-5 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4">
+								<ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+								<div>
+									<h3 className="text-sm font-black text-red-800">Connection Failed</h3>
+									<p className="text-xs text-red-600 mt-1 leading-relaxed">
+										Check if <code className="bg-white px-1 rounded border border-red-200 font-mono">vertex-key.json</code> is in the root folder.
+									</p>
 								</div>
 							</div>
-							<p className="text-[11px] text-text-main/40 font-medium">
-								This key provides access to <span className="text-dark-bg font-bold">Imagen 3.0</span> and <span className="text-dark-bg font-bold">Gemini 3.1</span> models.
-							</p>
-						</div>
+						)}
 
-						<div className="space-y-3">
-							<label className="text-sm font-bold text-dark-bg">Default Output Model</label>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<button className="flex items-center justify-between p-4 bg-white border-2 border-primary-red rounded-xl shadow-sm text-left group transition-all">
+						{systemStatus === 'online' && (
+							<div className="space-y-6">
+								<div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
 									<div className="flex items-center gap-3">
-										<Sparkles className="w-5 h-5 text-primary-red" />
-										<div>
-											<p className="text-sm font-bold text-dark-bg">Imagen 3.0 Generate</p>
-											<p className="text-[10px] text-text-main/50 font-medium">High-fidelity Masterpieces</p>
-										</div>
+										<CheckCircle2 className="w-5 h-5 text-emerald-600" />
+										<p className="text-sm font-black text-emerald-800">Connected to Project: <span className="opacity-70">{projectId}</span></p>
 									</div>
-									<ChevronRight className="w-4 h-4 text-primary-red" />
-								</button>
-								<button className="flex items-center justify-between p-4 bg-light-gray/20 border border-gray-200 rounded-xl text-left hover:border-dark-bg/20 hover:bg-white transition-all">
-									<div className="flex items-center gap-3">
-										<RefreshCw className="w-5 h-5 text-text-main/30" />
-										<div>
-											<p className="text-sm font-bold text-text-main/60">Imagen 3.0 Fast</p>
-											<p className="text-[10px] text-text-main/40 font-medium">Quick 512px renders</p>
+									<span className="text-[10px] font-black text-white bg-emerald-600 px-3 py-1 rounded-full uppercase">Online</span>
+								</div>
+
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+									{activeModels.map((m: any) => (
+										<div key={m.name} className="p-4 bg-white border border-gray-200 rounded-2xl flex items-center gap-3">
+											<div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-blue-500">
+												<Cpu className="w-4 h-4" />
+											</div>
+											<div>
+												<p className="text-xs font-black text-gray-900">{m.name}</p>
+												<p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest">{m.status}</p>
+											</div>
 										</div>
-									</div>
-								</button>
+									))}
+								</div>
 							</div>
-						</div>
+						)}
 					</div>
 				</section>
 
-				{/* --- Profile Preferences Card --- */}
-				<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden transition-all">
-					<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex flex-wrap items-center gap-4">
-						<div className="w-10 h-10 bg-primary-red text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary-red/20 shrink-0">
+				<section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+					<div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-4">
+						<div className="w-10 h-10 bg-red-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20">
 							<User className="w-5 h-5" />
 						</div>
-						<div>
-							<h2 className="text-lg font-bold text-dark-bg">Admin Profile</h2>
-							<p className="text-xs text-text-main/50 font-medium tracking-wide">Personalize your system identity</p>
+						<h2 className="text-lg font-bold text-gray-900">Admin Account</h2>
+					</div>
+					<div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-8">
+						<div className="space-y-2">
+							<label className="text-xs font-black text-gray-400 uppercase tracking-widest">Full Name</label>
+							<input 
+								type="text" 
+								value={fullName} 
+								onChange={(e) => setFullName(e.target.value)} 
+								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all" 
+							/>
+						</div>
+						<div className="space-y-2">
+							<label className="text-xs font-black text-gray-400 uppercase tracking-widest">Email Address</label>
+							<input 
+								type="email" 
+								value={businessEmail} 
+								onChange={(e) => setBusinessEmail(e.target.value)} 
+								className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all" 
+							/>
 						</div>
 					</div>
-
-					<div className="p-5 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-						<div className="space-y-3">
-							<label className="text-sm font-bold text-dark-bg">Full Name</label>
-							<input
-								type="text"
-								defaultValue="Kidakorn Intha"
-								className="w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm font-medium text-dark-bg outline-none focus:bg-white focus:border-primary-red/40 transition-all"
-							/>
-						</div>
-						<div className="space-y-3">
-							<label className="text-sm font-bold text-dark-bg">Business Email</label>
-							<input
-								type="email"
-								defaultValue="admin@devashop.com"
-								className="w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm font-medium text-dark-bg outline-none focus:bg-white focus:border-primary-red/40 transition-all"
-							/>
-						</div>
+					<div className="px-8 pb-8 flex justify-end">
+						<button 
+							onClick={handleSave} 
+							disabled={isSaving} 
+							className="px-8 py-3 bg-gray-900 text-white font-black text-sm rounded-xl hover:bg-red-600 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg active:scale-95"
+						>
+							{isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+							Save Changes
+						</button>
 					</div>
 				</section>
 
-				{/* --- Save Button --- */}
-				<div className="flex flex-col-reverse sm:flex-row justify-end items-center gap-4 pt-2">
-					<p className="text-xs text-text-main/40 font-medium text-center sm:text-right">
-						Changes are applied immediately across all studio modules.
-					</p>
-					<button
-						onClick={handleSave}
-						disabled={isSaving}
-						className="w-full sm:w-auto bg-dark-bg hover:bg-primary-red text-white font-bold px-8 py-3.5 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 shadow-md active:scale-95"
-					>
-						{isSaving ? (
-							<>
-								<RefreshCw className="w-4 h-4 animate-spin" />
-								Saving...
-							</>
-						) : (
-							<>
-								<Save className="w-4 h-4" />
-								Save Settings
-							</>
-						)}
-					</button>
-				</div>
 			</div>
 		</DashboardLayout>
 	);
