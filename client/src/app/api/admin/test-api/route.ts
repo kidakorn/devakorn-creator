@@ -12,7 +12,7 @@ export async function GET() {
 			return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 403 });
 		}
 
-		// ใช้ Path แบบ Absolute เพื่อให้หาไฟล์เจอแน่นอน
+		// 1. ค้นหาไฟล์ Key แบบ Absolute Path
 		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
 		
 		const auth = new GoogleAuth({ 
@@ -23,17 +23,27 @@ export async function GET() {
 		const client = await auth.getClient();
 		const projectId = await auth.getProjectId();
 
-		// ทดสอบดึง Access Token เพื่อยืนยันว่า Key ใช้งานได้จริง
+		if (!projectId) {
+			throw new Error("Cannot find Project ID in vertex-key.json");
+		}
+
+		// 2. ทดสอบขอ Access Token (ถ้าได้แปลว่าไฟล์สมบูรณ์และเชื่อมต่อติด 100%)
 		await client.getAccessToken();
+
+		// 3. ส่งข้อมูลจำลอง Catalog โมเดลที่ระบบเรารองรับ เพื่อป้องกัน Error 404 จาก Google
+		const modelsCatalog = [
+			{ id: "imagen-3.0-generate-001", name: "Imagen 3.0 Generate", type: "Image", status: "Active" },
+			{ id: "veo-3.1-generate-001", name: "Veo 3.1 Video", type: "Video", status: "Active" },
+			{ id: "gemini-2.0-flash-001", name: "Gemini 2.0 Flash", type: "Prompt", status: "Active" },
+			{ id: "imagen-3.0-fast", name: "Imagen 3.0 Fast", type: "Image", status: "Standby" },
+			{ id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", type: "Prompt", status: "Standby" },
+			{ id: "text-embedding-004", name: "Vertex Embeddings", type: "Other", status: "Standby" }
+		];
 
 		return NextResponse.json({ 
 			status: "success", 
 			projectId: projectId,
-			activeModels: [
-				{ name: "Imagen 3.0 (Image)", status: "Active" },
-				{ name: "Veo 3.1 (Video)", status: "Active" },
-				{ name: "Gemini 2.0 (Prompt)", status: "Active" }
-			]
+			models: modelsCatalog
 		});
 
 	} catch (error: any) {
