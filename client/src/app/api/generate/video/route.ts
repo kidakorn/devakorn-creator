@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { v2 as cloudinary } from 'cloudinary';
+import path from "path";
 
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -33,26 +34,32 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		const COST_PER_VIDEO = 350;
-		if (user.coinBalance < COST_PER_VIDEO) {
-			return NextResponse.json({
-				status: "error",
-				message: `Premium feature! Not enough coins. You need ${COST_PER_VIDEO} coins to produce a video ad.`
-			}, { status: 403 });
-		}
-
+		// 🟢 รับค่าจากหน้าเว็บ (ไม่ต้องรับ quality แล้ว)
 		const { prompt, category, aspectRatio } = await req.json();
 		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
 
-		const finalPrompt = `Commercial Video Style: ${category}. High-quality product showcase, sharp focus, cinematic lighting. ${prompt}`;
+		// 🟢 กำหนดราคาเดียว 799 Coins
+		const COST_PER_VIDEO = 799;
 
-		// โค้ดดึงการตั้งค่าเพื่อรองรับโมเดล Veo เวอร์ชั่นใหม่ๆ ในอนาคต
-		const apiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'GOOGLE_API_KEY' } });
+		if (user.coinBalance < COST_PER_VIDEO) {
+			return NextResponse.json({
+				status: "error",
+				message: `Not enough coins! You need ${COST_PER_VIDEO} coins to produce a video ad.`
+			}, { status: 403 });
+		}
+
+		// 🟢 ปรับแต่ง Prompt โดยเอาคำว่า 4K ออก ปล่อยให้ลูกค้ากำหนดเอง
+		const styleModifier = "Masterpiece, highly detailed, sharp focus, cinematic lighting, high-quality product showcase";
+		const finalPrompt = `${prompt}, Commercial Video Style: ${category}, ${styleModifier}`;
+
+		// 🟢 โหลดสิทธิ์จากไฟล์ json ของ Google Cloud โดยตรง (เสถียรกว่า)
+		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
+		process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 
 		const client = new GoogleGenAI({ vertexai: true, project: 'devakorn-creator-ai', location: 'us-central1' });
-		const storage = new Storage();
+		const storage = new Storage({ keyFilename: keyPath });
 
-		console.log("[1/3] Submitting video job to Veo AI...");
+		console.log(`[1/3] Submitting video job to Veo AI (Price: 799 Coins)...`);
 		let operation = await client.models.generateVideos({
 			model: 'veo-3.1-generate-001',
 			prompt: finalPrompt,
@@ -120,7 +127,7 @@ export async function POST(req: Request) {
 					type: 'SPEND_VIDEO',
 					amount: -COST_PER_VIDEO,
 					balanceAfter: user.coinBalance - COST_PER_VIDEO,
-					description: `Generated Video (${aspectRatio}): ${finalPrompt.substring(0, 30)}...`,
+					description: `Video Ad Creation: ${finalPrompt.substring(0, 30)}...`,
 					status: 'COMPLETED',
 				}
 			})
@@ -130,7 +137,8 @@ export async function POST(req: Request) {
 			status: "success",
 			videoUrl: uploadResponse.secure_url,
 			video: videoBase64,
-			remainingCoins: updatedUser.coinBalance
+			remainingCoins: updatedUser.coinBalance,
+			usedModel: 'veo-3.1-generate-001'
 		});
 
 	} catch (error: any) {

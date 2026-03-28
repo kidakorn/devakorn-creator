@@ -4,7 +4,6 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
-// 🟢 เพิ่ม ShieldAlert เข้ามาสำหรับไอคอนแจ้งเตือน
 import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -29,11 +28,11 @@ export default function PromptEnhancerPage() {
 	});
 
 	const currentCoins = balanceData?.coinBalance ?? 0;
-	// 🟢 ดึงสถานะการแบนมาใช้งาน
 	const isBanned = balanceData?.isBanned ?? false;
 
+	const currentCost = 15;
+
 	const handleMagic = async () => {
-		// 🟢 ดักไม่ให้ทำงานถ้าโดนแบน
 		if (isBanned) return alert("Your account has been suspended.");
 		if (!idea) return;
 
@@ -52,6 +51,9 @@ export default function PromptEnhancerPage() {
 
 			if (response.ok && data.status === 'success') {
 				setEnhancedPrompt(data.prompt);
+
+				// 🟢 ล้างกล่องข้อความให้ว่างทันทีที่เจนสำเร็จ
+				setIdea("");
 
 				if (data.remainingCoins !== undefined) {
 					mutate({ coinBalance: data.remainingCoins, isBanned: isBanned }, false);
@@ -76,8 +78,7 @@ export default function PromptEnhancerPage() {
 		setTimeout(() => setIsCopied(false), 2000);
 	};
 
-	// 🟢 เปลี่ยนเงื่อนไขจาก 2 เป็น 10 Coins
-	const isButtonDisabled = isEnhancing || !idea || currentCoins < 10 || isBanned;
+	const isButtonDisabled = isEnhancing || !idea || currentCoins < currentCost || isBanned;
 
 	return (
 		<DashboardLayout>
@@ -102,7 +103,7 @@ export default function PromptEnhancerPage() {
 						</div>
 
 						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-6">
-							{/* Category Selection Tags */}
+
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
 									<Tags className="w-4 h-4 text-primary-red" /> Product Type
@@ -132,10 +133,10 @@ export default function PromptEnhancerPage() {
 									placeholder="e.g., A luxury perfume bottle with floral scent..."
 									className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
 								/>
+								{/* 🟢 คลีน Pro Tip ออกเรียบร้อยครับ */}
 							</div>
 
 							<div className="mt-auto">
-								{/* 🟢 แจ้งเตือนสถานะแบน */}
 								{isBanned && (
 									<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
 										<ShieldAlert className="w-4 h-4" /> Account Suspended
@@ -157,12 +158,12 @@ export default function PromptEnhancerPage() {
 										</>
 									) : isBanned ? (
 										'Suspended'
-									) : currentCoins < 10 ? ( // 🟢 เปลี่ยนการแจ้งเตือน
-										'Insufficient Coins (10 Coins)'
+									) : currentCoins < currentCost ? (
+										`Insufficient Coins (${currentCost} Coins)`
 									) : (
 										<>
 											<Wand2 className="w-4 h-4" />
-											Enhance Prompt (-10 Coins) {/* 🟢 เปลี่ยนปุ่ม */}
+											Enhance Prompt (-{currentCost} Coins)
 										</>
 									)}
 								</button>

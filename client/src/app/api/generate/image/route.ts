@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { GoogleAuth } from "google-auth-library";
 import { Buffer } from "buffer";
 import { v2 as cloudinary } from 'cloudinary';
+import path from "path";
 
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -36,40 +37,48 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		const COST_PER_IMAGE = 30;
-		if (user.coinBalance < COST_PER_IMAGE) {
-			return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
-		}
-
 		const formData = await req.formData();
 		const rawPrompt = formData.get("prompt") as string;
 		const aspectRatio = formData.get("aspectRatio") as string || "1:1";
 		const category = formData.get("category") as string || "None";
 		const file = formData.get("image") as File | null;
+		// 🟢 รับค่าตัวแปรโหมดคุณภาพจากหน้าเว็บ
+		const quality = formData.get("quality") as string || "pro";
 
 		if (!rawPrompt) {
 			return NextResponse.json({ status: "error", message: "Prompt is required." }, { status: 400 });
 		}
 
-		let finalPrompt = rawPrompt;
-		if (category !== "None") {
-			finalPrompt = `Commercial Product Asset Style: ${category}. ${rawPrompt}. Highly detailed, professional studio quality.`;
+		// 🟢 กำหนดราคาและโมเดลตามที่บอสตั้งไว้ (Fast=29, Pro=49)
+		const COST_PER_IMAGE = quality === "fast" ? 29 : 49;
+		let selectedModel = quality === "fast" ? 'imagen-3.0-fast-generate-001' : 'imagen-3.0-generate-001';
+
+		// ถ้ามีการอัปโหลดรูปภาพอ้างอิง ระบบต้องบังคับใช้รุ่น capability
+		if (file) {
+			selectedModel = 'imagen-3.0-capability-001';
 		}
 
-		// ดึงการตั้งค่าโมเดลจาก Database
-		const defaultModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'DEFAULT_AI_MODEL' } });
-		const selectedModel = defaultModelSetting?.value || 'imagen-3.0-generate-001';
+		if (user.coinBalance < COST_PER_IMAGE) {
+			return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
+		}
 
+		let finalPrompt = rawPrompt;
+		if (category !== "None") {
+			finalPrompt = `${rawPrompt}, Commercial Product Asset Style: ${category}, Highly detailed, professional studio quality.`;
+		}
+
+		// 🟢 ใช้การอ้างอิง Key แบบ Absolute Path เพื่อความเสถียร
+		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
 		const auth = new GoogleAuth({
+			keyFile: keyPath,
 			scopes: ['https://www.googleapis.com/auth/cloud-platform'],
 		});
+
 		const client = await auth.getClient();
-		const projectId = 'devakorn-creator-ai';
+		const projectId = await auth.getProjectId();
 		const location = 'us-central1';
 
-		// ใช้โมเดลที่เลือกจากหน้า Settings
-		const model = file ? 'imagen-3.0-capability-001' : selectedModel;
-		const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:predict`;
+		const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:predict`;
 
 		const instanceData: any = { prompt: finalPrompt };
 
@@ -86,9 +95,7 @@ export async function POST(req: Request) {
 				{
 					referenceId: 1,
 					referenceType: "REFERENCE_TYPE_RAW",
-					referenceImage: {
-						bytesBase64Encoded: imageBase64
-					}
+					referenceImage: { bytesBase64Encoded: imageBase64 }
 				}
 			];
 		}
@@ -98,10 +105,7 @@ export async function POST(req: Request) {
 			method: 'POST',
 			data: {
 				instances: [instanceData],
-				parameters: {
-					sampleCount: 1,
-					aspectRatio: aspectRatio
-				}
+				parameters: { sampleCount: 1, aspectRatio: aspectRatio }
 			}
 		});
 
@@ -109,10 +113,7 @@ export async function POST(req: Request) {
 
 		const uploadResponse = await cloudinary.uploader.upload(
 			`data:image/png;base64,${base64Image}`,
-			{
-				folder: "devakorn-ai-creator/images",
-				resource_type: "image"
-			}
+			{ folder: "devakorn-ai-creator/images", resource_type: "image" }
 		);
 
 		const [updatedUser, newAsset, ledgerEntry] = await prisma.$transaction([
@@ -136,7 +137,7 @@ export async function POST(req: Request) {
 					type: 'SPEND_IMAGE',
 					amount: -COST_PER_IMAGE,
 					balanceAfter: user.coinBalance - COST_PER_IMAGE,
-					description: `Generated Image (${aspectRatio}): ${finalPrompt.substring(0, 30)}...`,
+					description: `Image (${quality === 'fast' ? 'Standard' : 'Premium'}): ${finalPrompt.substring(0, 30)}...`,
 					status: 'COMPLETED',
 				}
 			})
@@ -146,7 +147,8 @@ export async function POST(req: Request) {
 			status: "success",
 			imageUrl: newAsset.outputUrl,
 			image: base64Image,
-			remainingCoins: updatedUser.coinBalance
+			remainingCoins: updatedUser.coinBalance,
+			usedModel: selectedModel
 		});
 
 	} catch (error: any) {

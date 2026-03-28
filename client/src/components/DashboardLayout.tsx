@@ -39,14 +39,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 	}
 
 	return (
-		<div className="min-h-screen bg-[#F8F9FA] text-text-main flex font-sans overflow-hidden">
+		<div className="min-h-screen w-full bg-[#F8F9FA] text-text-main flex font-sans overflow-hidden">
 			<Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-			<div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+			<div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
 				<Header toggleSidebar={toggleSidebar} />
 
-				<main className="flex-1 overflow-y-auto p-4 md:p-8">
-					<div className="max-w-7xl mx-auto">
+				{/* 🟢 เพิ่ม w-full ให้ main */}
+				<main className="flex-1 overflow-y-auto p-4 md:p-8 w-full">
+					{/* 🟢 เพิ่ม w-full ให้กล่อง max-w-7xl ตรงนี้สำคัญมาก! ถ้าไม่มีมันจะหดตัว */}
+					<div className="max-w-7xl w-full mx-auto">
 						{children}
 					</div>
 				</main>

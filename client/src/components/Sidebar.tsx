@@ -17,9 +17,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 
 	const navItems = [
 		{ name: "Overview", href: "/", icon: LayoutDashboard },
+		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
 		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
-		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
 		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet },
 		{ name: "My Profile", href: "/profile", icon: User },

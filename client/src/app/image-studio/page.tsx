@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import {
-	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert
+	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert, Zap
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -28,17 +28,19 @@ export default function ImageStudio() {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+	const [quality, setQuality] = useState<'fast' | 'pro'>('pro');
+
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
 		revalidateOnFocus: true
 	});
 
 	const currentCoins = balanceData?.coinBalance ?? 0;
-	// ดึงสถานะการแบนจาก API เดียวกับที่ดึงเหรียญ
 	const isBanned = balanceData?.isBanned ?? false;
 
-	// 🟢 เปลี่ยนเงื่อนไขจาก 20 เป็น 30 Coins
-	const isButtonDisabled = isGenerating || !prompt || currentCoins < 30 || isBanned;
+	const currentCost = quality === 'fast' ? 29 : 49;
+
+	const isButtonDisabled = isGenerating || !prompt || currentCoins < currentCost || isBanned;
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -77,6 +79,7 @@ export default function ImageStudio() {
 			formData.append('prompt', prompt);
 			formData.append('aspectRatio', aspectRatio);
 			formData.append('category', selectedCategory);
+			formData.append('quality', quality);
 
 			if (selectedFile) {
 				formData.append('image', selectedFile);
@@ -141,181 +144,209 @@ export default function ImageStudio() {
 
 	return (
 		<DashboardLayout>
-			<div className="min-h-screen bg-light-gray text-text-main flex flex-col md:flex-row font-sans">
-				<main className="flex-1 flex flex-col h-screen overflow-y-auto">
-					<div className="p-8 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-						{/* Left Panel: Controls */}
-						<div className="lg:col-span-4 space-y-6">
+			{/* 🟢 คลีน Wrapper นอกสุดให้เรียบง่าย ไม่ต้องมี flex หรือ h-screen มากวน */}
+			<div className="w-full pb-12 animate-in fade-in duration-500">
+				
+				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+					{/* Left Panel: Controls (ใช้ col-span-4 ปกติโดยไม่ต้องยัด w-full เข้าไปตีกัน) */}
+					<div className="lg:col-span-4 space-y-6">
+						<div>
+							<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
+								<PackageOpen className="w-6 h-6 text-primary-red" />
+								Product Image Studio
+							</h1>
 							<div>
-								<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
-									<PackageOpen className="w-6 h-6 text-primary-red" />
-									Product Image Studio
-								</h1>
-								<div>
-									<p className="text-sm font-medium text-text-main/50 mt-1">Generate highly-converting commercial product assets.</p>
-								</div>
+								<p className="text-sm font-medium text-text-main/50 mt-1">Generate highly-converting commercial product assets.</p>
 							</div>
+						</div>
 
-							<div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-7">
-								<div className="space-y-3">
-									<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-										<Tags className="w-4 h-4 text-primary-red" /> Product Asset Type
-									</label>
-									<div className="flex flex-wrap gap-2">
-										{CATEGORIES.map((cat) => (
-											<button
-												key={cat}
-												onClick={() => setSelectedCategory(cat)}
-												className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat
-													? 'bg-primary-red text-white border-primary-red shadow-sm'
-													: 'bg-light-gray/50 text-text-main/60 border-gray-200 hover:border-primary-red/50 hover:text-dark-bg'
-													}`}
-											>
-												{cat}
-											</button>
-										))}
-									</div>
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-										<Wand2 className="w-4 h-4 text-primary-red" />
-										Core Product Idea
-									</label>
-									<textarea
-										rows={4}
-										value={prompt}
-										onChange={(e) => setPrompt(e.target.value)}
-										placeholder="e.g., A minimalist ceramic coffee mug, natural light..."
-										className="w-full bg-light-gray/50 border border-gray-200 rounded-lg p-4 text-sm text-dark-bg placeholder:text-text-main/40 focus:border-primary-red/50 focus:ring-4 focus:ring-primary-red/10 outline-none transition-all resize-none"
-									/>
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-										<UploadCloud className="w-4 h-4 text-primary-red" />
-										Reference Sketch <span className="text-text-main/40 font-normal">(Optional)</span>
-									</label>
-
-									{!imagePreview ? (
-										<div className="flex items-center justify-center w-full">
-											<label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-light-gray/30 hover:bg-light-gray/80 hover:border-primary-red/50 transition-all">
-												<div className="flex flex-col items-center justify-center pt-5 pb-6">
-													<UploadCloud className="w-7 h-7 mb-2 text-text-main/40" />
-													<p className="mb-1 text-sm text-text-main/60"><span className="font-semibold text-dark-bg">Click to upload</span></p>
-													<p className="text-xs text-text-main/40">PNG, JPG or WEBP (Max. 5MB)</p>
-												</div>
-												<input
-													id="dropzone-file"
-													type="file"
-													className="hidden"
-													accept="image/jpeg, image/png, image/webp"
-													onChange={handleFileChange}
-												/>
-											</label>
-										</div>
-									) : (
-										<div className="relative inline-block border border-gray-200 rounded-lg p-2 bg-light-gray/30">
-											<img src={imagePreview} alt="Reference Preview" className="h-28 w-auto rounded object-contain" />
-											<button onClick={removeImage} className="absolute -top-2 -right-2 bg-dark-bg text-white rounded-full p-1.5 hover:bg-primary-red shadow-md transition-all">
-												<X className="w-3.5 h-3.5" />
-											</button>
-										</div>
-									)}
-								</div>
-
-								<div className="space-y-3">
-									<label className="text-sm font-bold text-dark-bg">Aspect Ratio</label>
-									<div className="grid grid-cols-3 gap-3">
-										{["1:1", "16:9", "9:16"].map((ratio) => (
-											<button
-												key={ratio}
-												onClick={() => setAspectRatio(ratio)}
-												className={`py-3 rounded-lg border flex flex-col items-center justify-center transition-all ${aspectRatio === ratio ? "border-primary-red bg-primary-red/5 text-primary-red font-bold" : "border-gray-200 bg-white text-text-main/60 hover:border-gray-300 hover:text-dark-bg"}`}
-											>
-												<span className="text-xs tracking-wide font-semibold">{ratio === "1:1" ? "1:1 (Square)" : ratio === "16:9" ? "16:9 (Web)" : "9:16 (Story)"}</span>
-											</button>
-										))}
-									</div>
-								</div>
-
-								<div>
-									{/* แจ้งเตือนสถานะแบน */}
-									{isBanned && (
-										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
-											<ShieldAlert className="w-4 h-4" /> Account Suspended
-										</div>
-									)}
-
+						<div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-7">
+							
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<Zap className="w-4 h-4 text-primary-red" /> Render Quality
+								</label>
+								<div className="flex gap-4">
 									<button
-										onClick={handleGenerate}
-										disabled={isButtonDisabled}
-										className={`w-full font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all ${isButtonDisabled
-											? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
-											: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
-											}`}
+										onClick={() => setQuality('fast')}
+										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3.5 rounded-xl transition-all border ${quality === 'fast' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm transform scale-[1.02]' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white hover:border-gray-300'}`}
 									>
-										{isGenerating ? (
-											<>
-												<RefreshCw className="w-4 h-4 animate-spin" />
-												Designing Product...
-											</>
-										) : isBanned ? (
-											'Suspended'
-										) : currentCoins < 30 ? ( // 🟢 เปลี่ยนการแจ้งเตือนจาก 20 เป็น 30 Coins
-											'Insufficient Coins (30 Coins)'
-										) : (
-											<>
-												<Sparkles className="w-4 h-4" />
-												Generate Image (-30 Coins) {/* 🟢 เปลี่ยนปุ่มจาก -20 เป็น -30 Coins */}
-											</>
-										)}
+										<span className="text-sm font-black">Standard Render</span>
+										<span className="text-[10px] font-medium opacity-70">Economy Quality</span>
+										<span className={`text-[10px] font-bold mt-1 px-2 py-0.5 rounded-md ${quality === 'fast' ? 'bg-primary-red/20 text-primary-red' : 'bg-gray-200 text-gray-500'}`}>
+											29 Coins
+										</span>
+									</button>
+									<button
+										onClick={() => setQuality('pro')}
+										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3.5 rounded-xl transition-all border ${quality === 'pro' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm transform scale-[1.02]' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white hover:border-gray-300'}`}
+									>
+										<span className="text-sm font-black flex items-center gap-1">Studio Premium</span>
+										<span className="text-[10px] font-medium opacity-70">Ultra-HD Render</span>
+										<span className={`text-[10px] font-bold mt-1 px-2 py-0.5 rounded-md ${quality === 'pro' ? 'bg-primary-red/20 text-primary-red' : 'bg-gray-200 text-gray-500'}`}>
+											49 Coins
+										</span>
 									</button>
 								</div>
 							</div>
-						</div>
 
-						{/* Right Panel: Preview Area */}
-						<div className="lg:col-span-8 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center relative overflow-hidden min-h-125 shadow-sm">
-							<div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#000_1px,transparent_1px)] bg-size-[16px_16px] pointer-events-none"></div>
-
-							{isGenerating ? (
-								<div className="flex flex-col items-center z-10 animate-in fade-in duration-300">
-									<div className="w-16 h-16 bg-light-gray rounded-xl flex items-center justify-center mb-6 animate-pulse border border-gray-200">
-										<Sparkles className="w-8 h-8 text-primary-red animate-bounce" />
-									</div>
-									<p className="font-bold text-dark-bg text-lg">Rendering your commercial asset...</p>
-									<p className="text-sm text-text-main/60 mt-2">This usually takes 10-15 seconds</p>
-								</div>
-							) : generatedImage ? (
-								<div className="w-full h-full p-6 flex flex-col items-center justify-center group relative z-10 animate-in fade-in zoom-in-95 duration-500">
-									<img
-										src={generatedImage}
-										alt="AI Generated Art"
-										className="max-w-full max-h-[75vh] rounded-lg shadow-xl object-contain ring-1 ring-gray-200"
-									/>
-									<div className="absolute bottom-10 flex gap-3 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<Tags className="w-4 h-4 text-primary-red" /> Product Asset Type
+								</label>
+								<div className="flex flex-wrap gap-2">
+									{CATEGORIES.map((cat) => (
 										<button
-											onClick={handleDownload}
-											className="bg-dark-bg/90 backdrop-blur-md text-white hover:bg-primary-red px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg transition-all hover:scale-105"
+											key={cat}
+											onClick={() => setSelectedCategory(cat)}
+											className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat
+												? 'bg-primary-red text-white border-primary-red shadow-sm'
+												: 'bg-light-gray/50 text-text-main/60 border-gray-200 hover:border-primary-red/50 hover:text-dark-bg'
+												}`}
 										>
-											<Download className="w-4 h-4" /> Download Asset
+											{cat}
+										</button>
+									))}
+								</div>
+							</div>
+
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<Wand2 className="w-4 h-4 text-primary-red" />
+									Core Product Idea
+								</label>
+								<textarea
+									rows={4}
+									value={prompt}
+									onChange={(e) => setPrompt(e.target.value)}
+									placeholder="e.g., A minimalist ceramic coffee mug, natural light..."
+									className="w-full bg-light-gray/50 border border-gray-200 rounded-lg p-4 text-sm text-dark-bg placeholder:text-text-main/40 focus:border-primary-red/50 focus:ring-4 focus:ring-primary-red/10 outline-none transition-all resize-none"
+								/>
+							</div>
+
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<UploadCloud className="w-4 h-4 text-primary-red" />
+									Reference Sketch <span className="text-text-main/40 font-normal">(Optional)</span>
+								</label>
+
+								{!imagePreview ? (
+									<div className="flex items-center justify-center w-full">
+										<label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-light-gray/30 hover:bg-light-gray/80 hover:border-primary-red/50 transition-all">
+											<div className="flex flex-col items-center justify-center pt-5 pb-6">
+												<UploadCloud className="w-7 h-7 mb-2 text-text-main/40" />
+												<p className="mb-1 text-sm text-text-main/60"><span className="font-semibold text-dark-bg">Click to upload</span></p>
+												<p className="text-xs text-text-main/40">PNG, JPG or WEBP (Max. 5MB)</p>
+											</div>
+											<input
+												id="dropzone-file"
+												type="file"
+												className="hidden"
+												accept="image/jpeg, image/png, image/webp"
+												onChange={handleFileChange}
+											/>
+										</label>
+									</div>
+								) : (
+									<div className="relative inline-block border border-gray-200 rounded-lg p-2 bg-light-gray/30">
+										<img src={imagePreview} alt="Reference Preview" className="h-28 w-auto rounded object-contain" />
+										<button onClick={removeImage} className="absolute -top-2 -right-2 bg-dark-bg text-white rounded-full p-1.5 hover:bg-primary-red shadow-md transition-all">
+											<X className="w-3.5 h-3.5" />
 										</button>
 									</div>
+								)}
+							</div>
+
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg">Aspect Ratio</label>
+								<div className="grid grid-cols-3 gap-3">
+									{["1:1", "16:9", "9:16"].map((ratio) => (
+										<button
+											key={ratio}
+											onClick={() => setAspectRatio(ratio)}
+											className={`py-3 rounded-lg border flex flex-col items-center justify-center transition-all ${aspectRatio === ratio ? "border-primary-red bg-primary-red/5 text-primary-red font-bold" : "border-gray-200 bg-white text-text-main/60 hover:border-gray-300 hover:text-dark-bg"}`}
+										>
+											<span className="text-xs tracking-wide font-semibold">{ratio === "1:1" ? "1:1 (Square)" : ratio === "16:9" ? "16:9 (Web)" : "9:16 (Story)"}</span>
+										</button>
+									))}
 								</div>
-							) : (
-								<div className="flex flex-col items-center text-text-main/40 z-10">
-									<div className="w-20 h-20 bg-light-gray rounded-full flex items-center justify-center mb-5 border border-gray-200">
-										<ImagePlus className="w-8 h-8 text-text-main/30" />
+							</div>
+
+							<div>
+								{isBanned && (
+									<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
+										<ShieldAlert className="w-4 h-4" /> Account Suspended
 									</div>
-									<h3 className="font-bold text-dark-bg text-lg">No Asset Generated Yet</h3>
-									<p className="text-sm font-medium mt-1">Select a product type and enter a prompt.</p>
-								</div>
-							)}
+								)}
+
+								<button
+									onClick={handleGenerate}
+									disabled={isButtonDisabled}
+									className={`w-full font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all ${isButtonDisabled
+										? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+										: 'bg-dark-bg hover:bg-primary-red text-white shadow-sm active:scale-95'
+										}`}
+								>
+									{isGenerating ? (
+										<>
+											<RefreshCw className="w-4 h-4 animate-spin" />
+											Designing Product...
+										</>
+									) : isBanned ? (
+										'Suspended'
+									) : currentCoins < currentCost ? (
+										`Insufficient Coins (${currentCost} Coins)`
+									) : (
+										<>
+											<Sparkles className="w-4 h-4" />
+											Generate Image (-{currentCost} Coins)
+										</>
+									)}
+								</button>
+							</div>
 						</div>
 					</div>
-				</main>
+
+					{/* Right Panel: Preview Area */}
+					{/* 🟢 ใช้ col-span-8 คู่กับ min-h-[600px] ที่ Tailwind รู้จักชัวร์ๆ */}
+					<div className="lg:col-span-8 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center relative overflow-hidden min-h-150 shadow-sm">
+						<div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#000_1px,transparent_1px)] bg-size-[16px_16px] pointer-events-none"></div>
+
+						{isGenerating ? (
+							<div className="flex flex-col items-center z-10 animate-in fade-in duration-300">
+								<div className="w-16 h-16 bg-light-gray rounded-xl flex items-center justify-center mb-6 animate-pulse border border-gray-200">
+									<Sparkles className="w-8 h-8 text-primary-red animate-bounce" />
+								</div>
+								<p className="font-bold text-dark-bg text-lg">Rendering your commercial asset...</p>
+								<p className="text-sm text-text-main/60 mt-2">This usually takes 10-15 seconds</p>
+							</div>
+						) : generatedImage ? (
+							<div className="w-full h-full p-6 flex flex-col items-center justify-center group relative z-10 animate-in fade-in zoom-in-95 duration-500">
+								<img
+									src={generatedImage}
+									alt="AI Generated Art"
+									className="max-w-full max-h-[75vh] rounded-lg shadow-xl object-contain ring-1 ring-gray-200"
+								/>
+								<div className="absolute bottom-10 flex gap-3 opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
+									<button
+										onClick={handleDownload}
+										className="bg-dark-bg/90 backdrop-blur-md text-white hover:bg-primary-red px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg transition-all hover:scale-105"
+									>
+										<Download className="w-4 h-4" /> Download Asset
+									</button>
+								</div>
+							</div>
+						) : (
+							<div className="flex flex-col items-center text-text-main/40 z-10">
+								<div className="w-20 h-20 bg-light-gray rounded-full flex items-center justify-center mb-5 border border-gray-200">
+									<ImagePlus className="w-8 h-8 text-text-main/30" />
+								</div>
+								<h3 className="font-bold text-dark-bg text-lg">No Asset Generated Yet</h3>
+								<p className="text-sm font-medium mt-1">Select a product type and enter a prompt.</p>
+							</div>
+						)}
+					</div>
+				</div>
 			</div>
 		</DashboardLayout>
 	);
