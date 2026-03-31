@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
 	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck,
-	User, Eye // 🟢 เพิ่มไอคอน Eye
+	User, Eye, Megaphone // 🟢 เพิ่มไอคอน Megaphone เข้ามาครับ
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
@@ -20,17 +20,18 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
 		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
 		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
+		// 🟢 เพิ่มเมนู Campaign Builder ตรงนี้ครับ
+		{ name: "Campaign Builder", href: "/campaign-builder", icon: Megaphone },
 		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
 		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet },
 		{ name: "My Profile", href: "/profile", icon: User },
 	];
 
-	// 🟢 เช็คสิทธิ์แอดมิน
+	// เช็คสิทธิ์แอดมิน
 	const isAdmin = (session?.user as any)?.role === "ADMIN";
 
 	return (
 		<aside
-			// 🟢 ใช้โครงสร้าง CSS เดิมของบอส 100%
 			className={`relative bg-gray-150 border-r border-gray-300 flex flex-col transition-all duration-300 ease-in-out z-20 shrink-0 ${isOpen ? 'w-64' : 'w-20'}`}
 		>
 			<button
@@ -75,12 +76,12 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 					);
 				})}
 
-				{/* 🟢 แสดงเมนูพิเศษเฉพาะ Admin เท่านั้น */}
+				{/* แสดงเมนูพิเศษเฉพาะ Admin เท่านั้น */}
 				{isAdmin && (
 					<>
 						<div className="h-px bg-gray-300/50 my-4 mx-2"></div>
 
-						{/* 👑 ปุ่มไปหน้า Admin Panel */}
+						{/* ปุ่มไปหน้า Admin Panel */}
 						<Link
 							href="/admin"
 							title={!isOpen ? "Admin Panel" : undefined}
@@ -94,7 +95,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 							{isOpen && <span className="whitespace-nowrap">Admin Panel</span>}
 						</Link>
 
-						{/* 👁️ ปุ่มไปหน้า Content Moderation (ที่เพิ่มเข้ามาใหม่) */}
+						{/* ปุ่มไปหน้า Content Moderation (ที่เพิ่มเข้ามาใหม่) */}
 						<Link
 							href="/admin/gallery"
 							title={!isOpen ? "Moderation" : undefined}
@@ -108,7 +109,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 							{isOpen && <span className="whitespace-nowrap">Content Moderation</span>}
 						</Link>
 
-						{/* ⚙️ ปุ่มไปหน้า Settings */}
+						{/* ปุ่มไปหน้า Settings */}
 						<Link
 							href="/settings"
 							title={!isOpen ? "Settings" : undefined}

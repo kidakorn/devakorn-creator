@@ -82,7 +82,7 @@ model GeneratedAsset {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type        String // "IMAGE", "VIDEO", หรือ "PROMPT"
+  type        String // "IMAGE", "VIDEO", "PROMPT", หรือ "CAMPAIGN"
   prompt      String   @db.Text
   category    String?
   outputUrl   String   @db.Text
@@ -99,6 +99,7 @@ enum TransactionType {
   SPEND_PROMPT
   REFUND
   FREE_BONUS // 🟢 เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
+  SPEND_CAMPAIGN
 }
 
 enum TransactionStatus {
