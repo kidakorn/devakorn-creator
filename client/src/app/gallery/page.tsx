@@ -2,8 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import { useEffect, useState } from "react";
+// 🟢 1. Import useRouter เพื่อใช้พาวาร์ปเปลี่ยนหน้า
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw, FileText } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw, FileText, Megaphone } from "lucide-react";
 
 interface Asset {
 	id: string;
@@ -18,8 +20,9 @@ export default function GalleryPage() {
 	const [assets, setAssets] = useState<Asset[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
-	// 🟢 เพิ่ม State สำหรับจัดการ Tab
 	const [activeTab, setActiveTab] = useState("IMAGE");
+
+	const router = useRouter(); // 🟢 2. เรียกใช้ Router
 
 	const fetchAssets = async () => {
 		setLoading(true);
@@ -78,11 +81,19 @@ export default function GalleryPage() {
 		setTimeout(() => setCopiedId(null), 2000);
 	};
 
+	// 🟢 3. ฟังก์ชัน One-Click Campaign Builder
+	const handleBuildCampaign = (asset: Asset) => {
+		const imageUrl = getAssetSrc(asset);
+		// จำรูปที่เลือกลงในเครื่องลูกค้า (กันปัญหา URL ยาวเกินไปในกรณี Base64)
+		localStorage.setItem("selectedCampaignImage", imageUrl);
+		// พาวาร์ปไปหน้า Campaign Builder
+		router.push("/campaign-builder");
+	};
+
 	useEffect(() => {
 		fetchAssets();
 	}, []);
 
-	// 🟢 ฟิลเตอร์ Asset ตาม Tab ที่เลือก
 	const filteredAssets = assets.filter(asset => asset.type === activeTab);
 
 	return (
@@ -104,7 +115,6 @@ export default function GalleryPage() {
 					</button>
 				</div>
 
-				{/* 🟢 Tabs (Images / Videos / Prompts) */}
 				<div className="flex gap-2 border-b border-gray-200 pb-px">
 					<button
 						onClick={() => setActiveTab("IMAGE")}
@@ -132,11 +142,7 @@ export default function GalleryPage() {
 						<p className="text-text-main/50 font-bold">Loading your assets...</p>
 					</div>
 				) : filteredAssets.length > 0 ? (
-
-					/* 🟢 แยก Layout การแสดงผลตามประเภท Tab */
 					activeTab === "PROMPT" ? (
-
-						/* 👉 Layout สำหรับ Prompts (แนวนอนเรียงลงมา) */
 						<div className="flex flex-col gap-5">
 							{filteredAssets.map((asset) => (
 								<div key={asset.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-6">
@@ -166,10 +172,7 @@ export default function GalleryPage() {
 								</div>
 							))}
 						</div>
-
 					) : (
-
-						/* 👉 Layout สำหรับ Images & Videos (Grid แบบเดิม) */
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
 							{filteredAssets.map((asset) => (
 								<div key={asset.id} className="group bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col">
@@ -180,6 +183,7 @@ export default function GalleryPage() {
 											<video src={getAssetSrc(asset)} className="w-full h-full object-cover" muted loop onMouseOver={(e) => e.currentTarget.play()} onMouseOut={(e) => e.currentTarget.pause()} />
 										)}
 
+										{/* ปุ่มบนขวา (Download, Copy) */}
 										<div className="absolute top-3 right-3 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-all duration-300">
 											<button
 												onClick={() => handleDownload(asset)}
@@ -196,6 +200,18 @@ export default function GalleryPage() {
 												{copiedId === asset.id ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
 											</button>
 										</div>
+
+										{/* 🟢 4. ปุ่มล่าง (Build Campaign) เลื่อนขึ้นมาโชว์ตอน Hover เฉพาะรูปภาพ */}
+										{asset.type === "IMAGE" && (
+											<div className="absolute bottom-3 left-3 right-3 translate-y-16 group-hover:translate-y-0 transition-all duration-300">
+												<button
+													onClick={() => handleBuildCampaign(asset)}
+													className="w-full py-2.5 bg-primary-red/90 backdrop-blur-sm text-white rounded-xl shadow-lg hover:bg-primary-red transition-all font-bold text-xs flex items-center justify-center gap-2"
+												>
+													<Megaphone className="w-4 h-4" /> Build Campaign
+												</button>
+											</div>
+										)}
 									</div>
 
 									<div className="p-5 flex flex-col flex-1">

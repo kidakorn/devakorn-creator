@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import {
@@ -47,6 +47,14 @@ export default function CampaignBuilderPage() {
 	const currentCoins = balanceData?.coinBalance ?? 0;
 	const isBanned = balanceData?.isBanned ?? false;
 	const COST_PER_CAMPAIGN = 39;
+
+	useEffect(() => {
+		const savedImage = localStorage.getItem("selectedCampaignImage");
+		if (savedImage) {
+			setSelectedImageUrl(savedImage); // ยัดรูปเข้ากล่อง Selected Image อัตโนมัติ
+			localStorage.removeItem("selectedCampaignImage"); // ลบขยะออก
+		}
+	}, []);
 
 	const handleGenerate = async () => {
 		if (isBanned) return alert("Your account has been suspended.");
