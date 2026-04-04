@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@import "react-datepicker/dist/react-datepicker.css";
+
 @theme {
   /* ลงทะเบียนสี Custom ตามที่คุณต้องการ */
   --color-primary-red: #D90429;
