@@ -21,8 +21,7 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -56,9 +55,8 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-
   // 🟢 1. เปลี่ยนค่าเริ่มต้นเป็น 0 ป้องกันการสมัครปุ๊บได้ปั๊บ
-  coinBalance Int @default(0)
+  coinBalance   Int       @default(0)
 
   // 🟢 2. เพิ่มตัวแปรเช็คว่าเคยกดรับสิทธิ์ฟรี 50 Coins ไปหรือยัง
   hasClaimedFreeCoins Boolean @default(false)
@@ -75,6 +73,10 @@ model User {
 
   transactions    Transaction[]
   generatedAssets GeneratedAsset[]
+
+  // 🟢 เพิ่มความสัมพันธ์สำหรับระบบ Social
+  likes    Like[]
+  comments Comment[]
 }
 
 model GeneratedAsset {
@@ -89,6 +91,46 @@ model GeneratedAsset {
   aspectRatio String?
   createdAt   DateTime @default(now())
 
+  // 🟢 ตัวนับสถิติ (Counters) เพื่อเอาไปทำระบบ จัดอันดับ/Trending (Data is King)
+  likeCount    Int @default(0)
+  commentCount Int @default(0)
+  shareCount   Int @default(0)
+
+  // 🟢 ความสัมพันธ์กลับไปยัง Like และ Comment
+  likes    Like[]
+  comments Comment[]
+
+  @@index([userId])
+}
+
+// 🟢 ตารางใหม่: ระบบกดถูกใจ (Like)
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset GeneratedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // 1 คน กด Like ผลงานเดิมซ้ำไม่ได้
+  @@unique([userId, assetId])
+  @@index([assetId])
+}
+
+// 🟢 ตารางใหม่: ระบบคอมเมนต์ (Comment)
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  userId    String
+  assetId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset GeneratedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
   @@index([userId])
 }
 
@@ -98,8 +140,10 @@ enum TransactionType {
   SPEND_VIDEO
   SPEND_PROMPT
   REFUND
-  FREE_BONUS // 🟢 เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
+  FREE_BONUS // เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
   SPEND_CAMPAIGN
+  EARN_CREATOR_REWARD // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
+  EARN_SUPPORTER_BONUS // 🟢 โบนัสเล็กๆ น้อยๆ สำหรับคนช่วยกด Like/Comment สร้าง Viral Loop
 }
 
 enum TransactionStatus {

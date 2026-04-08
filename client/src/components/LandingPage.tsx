@@ -7,7 +7,7 @@ import React, { forwardRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import useSWR from "swr";
 import DatePicker from "react-datepicker";
-import { Activity, Clock, ImageIcon, VideoIcon, Play, Download, Loader2, LayoutGrid, ArrowRight, LineChart, Server, Calendar as CalendarIcon, ChevronDown, X } from "lucide-react";
+import { Activity, Clock, ImageIcon, VideoIcon, Play, Download, Loader2, LayoutGrid, ArrowRight, LineChart, Server, Calendar as CalendarIcon, ChevronDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PublicAsset {
@@ -46,14 +46,20 @@ DashboardCalendarButton.displayName = "DashboardCalendarButton";
 
 export default function LandingPage() {
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+	// 🟢 State สำหรับ Pagination
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const queryParams = new URLSearchParams();
+	
+	// 🟢 แนบเลขหน้าเข้าไปใน API
+	queryParams.append('page', currentPage.toString());
+
 	if (selectedDate) {
 		const year = selectedDate.getFullYear();
 		const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
 		const day = String(selectedDate.getDate()).padStart(2, '0');
 		const formattedDate = `${year}-${month}-${day}`;
-
+		
 		queryParams.append('start', formattedDate);
 		queryParams.append('end', formattedDate);
 	}
@@ -63,10 +69,11 @@ export default function LandingPage() {
 	});
 
 	const showcaseAssets: PublicAsset[] = data?.status === "success" ? data.assets : [];
-
+	const totalPages = data?.pagination?.totalPages || 1; // 🟢 ดึงจำนวนหน้ามาจาก API
+	
 	const totalAssets = data?.stats?.totalAssets || 0;
 	const formattedTotal = formatNumber(totalAssets);
-
+	
 	const globalUsageData = data?.stats?.chartData || [
 		{ name: 'Mon', image: 0, video: 0 },
 		{ name: 'Tue', image: 0, video: 0 },
@@ -87,39 +94,22 @@ export default function LandingPage() {
 
 	return (
 		<div className="min-h-screen bg-[#fafafa] font-sans flex flex-col text-gray-900 selection:bg-red-100 relative">
-
+			
 			<style>{`
-				.react-datepicker-wrapper {
-					width: auto;
-				}
+				.react-datepicker-wrapper { width: auto; }
 				.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
-					background-color: #EF4444 !important;
-					color: white !important;
-					border-radius: 8px !important;
+					background-color: #EF4444 !important; color: white !important; border-radius: 8px !important;
 				}
 				.react-datepicker {
-					font-family: inherit;
-					border: 1px solid #E5E7EB;
-					border-radius: 12px;
-					box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-					padding: 12px;
+					font-family: inherit; border: 1px solid #E5E7EB; border-radius: 12px;
+					box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); padding: 12px;
 				}
-				.react-datepicker__header {
-					background-color: white;
-					border-bottom: 1px solid #F3F4F6;
-					padding-bottom: 8px;
-				}
-				.react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle {
-					fill: white;
-					color: white;
-					stroke: #E5E7EB;
-				}
+				.react-datepicker__header { background-color: white; border-bottom: 1px solid #F3F4F6; padding-bottom: 8px; }
+				.react-datepicker-popper[data-placement^=bottom] .react-datepicker__triangle { fill: white; color: white; stroke: #E5E7EB; }
 			`}</style>
 
-			{/* Background accent - subtle red glow top right */}
 			<div className="absolute top-0 right-0 w-125 h-125 bg-red-100/30 rounded-full blur-3xl pointer-events-none z-0"></div>
 
-			{/* 🟢 Sticky Navbar: ล็อกติดขอบบนสุด พร้อมเอฟเฟกต์เบลอกระจก */}
 			<div className="sticky top-0 z-50 w-full px-4 sm:px-6 pt-4">
 				<nav className="flex items-center justify-between p-4 sm:p-5 max-w-7xl mx-auto w-full border border-gray-200/50 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm transition-all">
 					<div className="flex items-center gap-3">
@@ -137,7 +127,6 @@ export default function LandingPage() {
 
 			<main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-8 space-y-16 z-10 relative">
 
-				{/* Section 1: Hero Section */}
 				<section className="text-center pt-10 pb-20 sm:pt-16 sm:pb-28 flex flex-col items-center justify-center">
 					<div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-900 text-white font-bold text-xs shadow-lg mb-8 tracking-wide uppercase">
 						<Server className="w-4 h-4 text-red-500" />
@@ -149,15 +138,15 @@ export default function LandingPage() {
 					<p className="text-gray-500 text-lg sm:text-xl font-medium mt-8 max-w-2xl leading-relaxed">
 						Unlock the power of <strong className="text-gray-900 font-bold">advanced AI models</strong> to build high-quality commercial assets instantly. Join the future of content creation.
 					</p>
-
+					
 					<div className="flex flex-col sm:flex-row gap-4 mt-12 w-full sm:w-auto">
-						<button
+						<button 
 							onClick={() => signIn()}
 							className="px-10 py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:-translate-y-1 shadow-red-500/20 shadow-xl"
 						>
 							START CREATING - IT'S FREE
 						</button>
-						<button
+						<button 
 							onClick={() => signIn()}
 							className="px-10 py-4 bg-white hover:bg-gray-50 text-gray-900 font-bold rounded-xl text-lg border-2 border-gray-200 transition-all shadow-lg flex items-center justify-center gap-2"
 						>
@@ -166,14 +155,13 @@ export default function LandingPage() {
 					</div>
 				</section>
 
-				{/* Section 2: Platform Overview & Trend Chart */}
 				<section className="space-y-8">
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
 						<div>
 							<h2 className="text-2xl font-black text-gray-900 tracking-tight">Platform Overview</h2>
 							<p className="text-gray-500 text-sm mt-1 font-medium">Real-time global production statistics.</p>
 						</div>
-						<div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl items-center gap-2 text-xs font-bold text-emerald-700 shadow-sm hidden sm:flex">
+						<div className="px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs font-bold text-emerald-700 shadow-sm sm:flex">
 							<span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
 							System Online
 						</div>
@@ -240,18 +228,24 @@ export default function LandingPage() {
 								</h2>
 								<p className="text-xs text-gray-500 font-medium mt-1">Historical platform activity aggregation</p>
 							</div>
-
+							
 							<div className="relative z-40 flex items-center gap-2 w-full sm:w-auto">
 								<DatePicker
 									selected={selectedDate}
-									onChange={(date: Date | null) => setSelectedDate(date)}
+									onChange={(date: Date | null) => {
+										setSelectedDate(date);
+										setCurrentPage(1); // 🟢 รีเซ็ตหน้ากลับไปที่ 1 เวลาเปลี่ยนวันฟิลเตอร์
+									}}
 									dateFormat="MMMM d, yyyy"
 									customInput={<DashboardCalendarButton />}
 									popperPlacement="bottom-end"
 								/>
 								{selectedDate && (
-									<button
-										onClick={() => setSelectedDate(null)}
+									<button 
+										onClick={() => {
+											setSelectedDate(null);
+											setCurrentPage(1);
+										}} 
 										className="p-2 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-lg transition-colors border border-gray-100"
 										title="Clear filter"
 									>
@@ -289,15 +283,33 @@ export default function LandingPage() {
 					</div>
 				</section>
 
-				{/* Section 3: Community Showcase */}
 				<section className="bg-white border border-gray-200 rounded-2xl shadow-xl shadow-gray-100/30 overflow-hidden flex flex-col">
-					<div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+					<div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
 						<div>
 							<h2 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
 								<LayoutGrid className="w-5 h-5 text-red-600" />
 								Community Showcase
 							</h2>
 							<p className="text-xs text-gray-500 font-medium mt-1">Recent generations from our creators</p>
+						</div>
+						
+						{/* 🟢 ปุ่ม Pagination */}
+						<div className="flex items-center gap-2">
+							<button 
+								onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+								disabled={currentPage === 1}
+								className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+							<span className="text-xs font-bold text-gray-500 px-2">Page {currentPage} of {totalPages}</span>
+							<button 
+								onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+								disabled={currentPage >= totalPages}
+								className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
 						</div>
 					</div>
 
@@ -310,12 +322,12 @@ export default function LandingPage() {
 						) : showcaseAssets.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 								{showcaseAssets.map((asset) => (
-									<div
-										key={asset.id}
+									<div 
+										key={asset.id} 
 										className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-all group hover:-translate-y-1"
 										onMouseEnter={(e) => {
 											const video = e.currentTarget.querySelector("video");
-											if (video) video.play().catch(() => { });
+											if (video) video.play().catch(() => {});
 										}}
 										onMouseLeave={(e) => {
 											const video = e.currentTarget.querySelector("video");
@@ -342,12 +354,12 @@ export default function LandingPage() {
 											)}
 
 											{asset.type === "VIDEO" && (
-												<div className="absolute top-3 left-3 bg-gray-900/80 backdrop-blur-sm text-white px-2 py-1 rounded md flex items-center gap-1.5 text-[10px] font-bold tracking-wider">
+												<div className="absolute top-3 left-3 bg-gray-900/80 backdrop-blur-sm text-white px-2 py-1 rounded md flex items-center gap-1.5 text-[10px] font-bold tracking-wider z-10">
 													<Play className="w-3 h-3 fill-current" /> VIDEO
 												</div>
 											)}
 
-											<div className="absolute inset-0 bg-gray-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+											<div className="absolute inset-0 bg-gray-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px] z-20">
 												<button onClick={() => signIn()} className="px-4 py-2 bg-white text-gray-900 rounded-lg text-xs font-bold shadow-lg hover:bg-red-600 hover:text-white transition-colors flex items-center gap-2">
 													<Download className="w-4 h-4" /> Try Prompt
 												</button>
@@ -360,7 +372,7 @@ export default function LandingPage() {
 													{asset.type === 'IMAGE' ? <ImageIcon className="w-3 h-3" /> : <VideoIcon className="w-3 h-3" />} {asset.type}
 												</span>
 											</div>
-											<p
+											<p 
 												className="text-[11px] text-gray-500 font-medium truncate mb-3 flex-1 block"
 												title={asset.prompt}
 											>
@@ -378,13 +390,12 @@ export default function LandingPage() {
 							<div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
 								<ImageIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
 								<h3 className="text-sm font-bold text-gray-900">No public assets found</h3>
-								<p className="text-xs text-gray-500 font-medium mt-1">Try adjusting your date filter.</p>
+								<p className="text-xs text-gray-500 font-medium mt-1">Try adjusting your filter or page.</p>
 							</div>
 						)}
 					</div>
 				</section>
 
-				{/* Bottom CTA */}
 				<section className="bg-gray-900 rounded-3xl p-8 sm:p-16 text-center shadow-2xl border border-gray-800 shadow-red-500/10">
 					<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600 text-white font-black text-[10px] tracking-wider uppercase mb-5">
 						FREE TRIAL
@@ -403,7 +414,6 @@ export default function LandingPage() {
 
 			</main>
 
-			{/* Section 4: Footer */}
 			<footer className="py-8 text-center bg-white border-t border-gray-200 mt-16 z-10 relative">
 				<div className="max-w-7xl mx-auto px-6">
 					<p className="text-gray-900 font-black text-sm mb-4">DEVAKORN CREATOR AI</p>

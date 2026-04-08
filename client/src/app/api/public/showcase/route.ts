@@ -1,119 +1,103 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    let currentUserId: string | undefined = undefined;
+
+    try {
+      const session = await getServerSession(authOptions);
+      const currentUser = session?.user as { id?: string } | undefined;
+      currentUserId = currentUser?.id;
+    } catch (e) {
+      console.warn("Session check skipped.");
+    }
+
     const searchParams = req.nextUrl.searchParams;
     const start = searchParams.get("start");
     const end = searchParams.get("end");
+    
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = 8;
+    const skip = (page - 1) * limit;
 
     let dateFilter = {};
-    let isFilteringDate = false;
-    let chartStartDate = new Date();
-    let chartEndDate = new Date();
-
     if (start && end) {
-      isFilteringDate = true;
       const startDate = new Date(start);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(end);
       endDate.setHours(23, 59, 59, 999);
+      dateFilter = { createdAt: { gte: startDate, lte: endDate } };
+    }
 
-      dateFilter = {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        }
+    // 🟢 1. กรองนับเฉพาะผลงานของ "USER" เท่านั้น (ซ่อนแอดมิน)
+    const totalAssetsInFeed = await prisma.generatedAsset.count({
+      where: { type: { in: ["IMAGE", "VIDEO"] }, user: { role: "USER" }, ...dateFilter }
+    });
+    const totalPages = Math.ceil(totalAssetsInFeed / limit);
+
+    const queryInclude: any = {
+      user: { select: { name: true } }
+    };
+
+    if (currentUserId) {
+      queryInclude.likes = {
+        where: { userId: currentUserId },
+        select: { id: true }
       };
-
-      chartStartDate = startDate;
-      chartEndDate = endDate;
     }
 
-    // 1. ดึงข้อมูล Showcase พร้อมกรองวันที่
+    // 🟢 2. ดึงข้อมูลเฉพาะของ "USER" เท่านั้น (ซ่อนแอดมิน)
     const rawAssets = await prisma.generatedAsset.findMany({
-      where: {
-        type: { in: ["IMAGE", "VIDEO"] },
-        user: { role: "USER" },
-        ...dateFilter
-      },
+      where: { type: { in: ["IMAGE", "VIDEO"] }, user: { role: "USER" }, ...dateFilter },
       orderBy: { createdAt: 'desc' },
-      take: 50,
-      select: {
-        id: true,
-        type: true,
-        prompt: true,
-        outputUrl: true,
-        createdAt: true,
-        userId: true,
-        user: { select: { name: true } },
-      },
+      take: limit,
+      skip: skip,
+      include: queryInclude
     });
 
-    const userAssetCount: Record<string, number> = {};
-    const filteredAssets = [];
+    const formattedAssets = rawAssets.map((asset: any) => ({
+        id: asset.id,
+        type: asset.type,
+        prompt: asset.prompt,
+        outputUrl: asset.outputUrl,
+        createdAt: asset.createdAt,
+        userId: asset.userId,
+        user: asset.user,
+        likeCount: asset.likeCount || 0,
+        hasLiked: Array.isArray(asset.likes) && asset.likes.length > 0
+    }));
 
-    for (const asset of rawAssets) {
-      const uId = asset.userId;
-      if (!userAssetCount[uId]) userAssetCount[uId] = 0;
-
-      if (userAssetCount[uId] < 2) {
-        filteredAssets.push(asset);
-        userAssetCount[uId]++;
-      }
-
-      if (filteredAssets.length >= 12) break;
-    }
-
-    // 2. ดึงจำนวน Total Assets 
-    const totalAssetsCount = await prisma.generatedAsset.count({
-      where: dateFilter
+    const totalAssetsCount = await prisma.generatedAsset.count({ where: dateFilter });
+    const chartAssets = await prisma.generatedAsset.findMany({
+        where: dateFilter,
+        select: { type: true, createdAt: true }
     });
-
-    // 3. ดึงข้อมูลวาดกราฟ
-    let chartAssets;
-    if (isFilteringDate) {
-      // ถ้ามีการเลือกวันที่: ดึงข้อมูลเฉพาะวันที่เลือก
-      chartAssets = await prisma.generatedAsset.findMany({
-        where: {
-          createdAt: { gte: chartStartDate, lte: chartEndDate }
-        },
-        select: { type: true, createdAt: true }
-      });
-    } else {
-      // 🟢 ถ้าไม่ได้เลือกวันที่ (ตอนเปิดหน้าเว็บครั้งแรก): ดึงข้อมูล "ทั้งหมด" มาจัดกลุ่มเป็นกราฟรวม
-      chartAssets = await prisma.generatedAsset.findMany({
-        select: { type: true, createdAt: true }
-      });
-    }
 
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const orderedDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
     const chartMap: Record<string, { name: string, image: number, video: number }> = {};
-    orderedDays.forEach(d => {
-      chartMap[d] = { name: d, image: 0, video: 0 };
-    });
+    orderedDays.forEach(d => { chartMap[d] = { name: d, image: 0, video: 0 }; });
 
     chartAssets.forEach(asset => {
-      const dayName = daysOfWeek[asset.createdAt.getDay()];
-      if (chartMap[dayName]) {
-        if (asset.type === "IMAGE") chartMap[dayName].image += 1;
-        if (asset.type === "VIDEO") chartMap[dayName].video += 1;
-      }
+       const dayName = daysOfWeek[asset.createdAt.getDay()];
+       if (chartMap[dayName]) {
+           if (asset.type === "IMAGE") chartMap[dayName].image += 1;
+           if (asset.type === "VIDEO") chartMap[dayName].video += 1;
+       }
     });
-
-    const chartData = orderedDays.map(d => chartMap[d]);
 
     return NextResponse.json({
       status: "success",
-      assets: filteredAssets,
-      stats: {
-        totalAssets: totalAssetsCount,
-        chartData: chartData
-      }
+      assets: formattedAssets,
+      pagination: { page, totalPages, totalItems: totalAssetsInFeed },
+      stats: { totalAssets: totalAssetsCount, chartData: orderedDays.map(d => chartMap[d]) }
     });
 
   } catch (error) {

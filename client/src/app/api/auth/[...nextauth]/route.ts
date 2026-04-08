@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -9,12 +8,10 @@ import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
-
 	session: {
 		strategy: "jwt",
 		maxAge: 30 * 60,
 	},
-
 	providers: [
 		GoogleProvider({
 			clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -34,12 +31,9 @@ export const authOptions: NextAuthOptions = {
 				if (!user || !user.password) {
 					throw new Error("Invalid email or password");
 				}
-
-				// 🟢 1. ดักจับคนที่โดนแบน สำหรับการล็อกอินด้วย Email/Password
 				if (user.isBanned) {
 					throw new Error("Account Suspended: Your account has been banned.");
 				}
-
 				const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 				if (!isPasswordValid) {
 					throw new Error("Invalid email or password");
@@ -55,42 +49,37 @@ export const authOptions: NextAuthOptions = {
 			}
 		})
 	],
-
 	callbacks: {
-		// 🟢 2. ดักจับคนที่โดนแบน สำหรับการล็อกอินด้วย Google (OAuth)
 		async signIn({ user }) {
 			if (user?.email) {
 				const dbUser = await prisma.user.findUnique({
 					where: { email: user.email },
 					select: { isBanned: true }
 				});
-				if (dbUser?.isBanned) {
-					return "/login?error=banned"; // เตะกลับไปหน้าล็อกอินพร้อมแนบ Error
-				}
+				if (dbUser?.isBanned) return "/login?error=banned";
 			}
 			return true;
 		},
 		async jwt({ token, user, trigger, session }) {
 			if (user) {
+				token.id = user.id; // 🟢 ส่ง ID เข้า Token
 				token.role = (user as any).role;
 				token.coinBalance = (user as any).coinBalance;
 			}
-
 			if (trigger === "update" && session?.coinBalance !== undefined) {
 				token.coinBalance = session.coinBalance;
 			}
-
 			return token;
 		},
 		async session({ session, token }) {
 			if (session.user) {
+				(session.user as any).id = token.id || token.sub; // 🟢 ส่ง ID จาก Token เข้า Session
 				(session.user as any).role = token.role;
 				(session.user as any).coinBalance = token.coinBalance;
 			}
 			return session;
 		}
 	},
-
 	pages: { signIn: "/login" },
 	secret: process.env.NEXTAUTH_SECRET,
 };
