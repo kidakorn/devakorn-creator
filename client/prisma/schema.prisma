@@ -77,6 +77,8 @@ model User {
   // 🟢 เพิ่มความสัมพันธ์สำหรับระบบ Social
   likes    Like[]
   comments Comment[]
+  checkInStreak Int       @default(0)
+  lastCheckIn   DateTime?
 }
 
 model GeneratedAsset {
@@ -144,6 +146,7 @@ enum TransactionType {
   SPEND_CAMPAIGN
   EARN_CREATOR_REWARD // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
   EARN_SUPPORTER_BONUS // 🟢 โบนัสเล็กๆ น้อยๆ สำหรับคนช่วยกด Like/Comment สร้าง Viral Loop
+  DAILY_CHECKIN
 }
 
 enum TransactionStatus {

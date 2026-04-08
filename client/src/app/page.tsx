@@ -10,7 +10,7 @@ import fpPromise from "@fingerprintjs/fingerprintjs";
 import toast, { Toaster } from "react-hot-toast";
 import {
   ImageIcon, VideoIcon, Activity, Zap, Clock, ChevronRight, PackageOpen,
-  History, Loader2, Gift, Heart, Play, ChevronLeft, Download // 🟢 ลบ Copy ออก
+  History, Loader2, Gift, Heart, Play, ChevronLeft, Copy, Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -36,6 +36,32 @@ export default function Home() {
   const [likingId, setLikingId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+  const handleDailyCheckIn = async () => {
+    setIsCheckingIn(true);
+    const toastId = toast.loading('Claiming daily reward...');
+    try {
+      const res = await fetch('/api/user/checkin', { method: 'POST' });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success(data.message, {
+          id: toastId,
+          duration: 4000,
+          icon: <Gift className="w-5 h-5 text-amber-500" />
+        });
+        mutate('/api/user/balance');
+      } else {
+        toast.error(data.message || 'Failed to claim reward', { id: toastId, duration: 3000 });
+      }
+    } catch (err) {
+      toast.error('Network error. Please try again.', { id: toastId });
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
 
   const { data: balanceData } = useSWR(
     status === "authenticated" ? '/api/user/balance' : null,
@@ -133,11 +159,21 @@ export default function Home() {
     <DashboardLayout>
       <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview Dashboard</h1>
             <p className="text-gray-500 text-sm mt-1 font-medium">Welcome back, {session?.user?.name || 'Creator'}. Let's build something amazing today.</p>
           </div>
+
+          {/* 🟢 ปุ่ม Daily Check-in */}
+          <button
+            onClick={handleDailyCheckIn}
+            disabled={isCheckingIn}
+            className="px-5 py-2.5 bg-linear-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed border border-orange-400/50"
+          >
+            {isCheckingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calendar className="w-5 h-5" />}
+            Daily Reward
+          </button>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
