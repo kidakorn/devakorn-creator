@@ -24,8 +24,8 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 รับค่าภาษา (Language) เพิ่มเข้ามา
-		const { imageUrl, platform, tone, language } = await req.json();
+		// Receive flexible parameters from frontend
+		const { imageUrl, platform, tone, language, audience, objective, promotion, productName, additionalInfo } = await req.json();
 		if (!imageUrl) return NextResponse.json({ status: "error", message: "Please select an image from your gallery." }, { status: 400 });
 
 		const COST_PER_CAMPAIGN = 39;
@@ -48,27 +48,30 @@ export async function POST(req: Request) {
 
 		const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:generateContent`;
 
-		// 🔥 AGENCY LEVEL PROMPT ENGINEERING 🔥
+		// AGENCY LEVEL PROMPT ENGINEERING
 		const systemInstruction = `You are an elite, top-tier Digital Marketing Agency Copywriter. 
 		Your task is to analyze the provided product image and write a high-converting, deeply engaging social media campaign. Do not write a simple description; write a psychological sales copy.
 		
 		Target Platform: ${platform || 'Facebook'}
+		Product Name: ${productName || 'Identify from image'}
+		Additional Info: ${additionalInfo || 'Identify features from image'}
+		Target Audience: ${audience || 'General Public'}
+		Campaign Objective: ${objective || 'Direct Conversion'}
+		Key Promotion/Offer: ${promotion || 'None'}
 		Tone of Voice: ${tone || 'Engaging & Professional'}
 		Output Language: ${language || 'Thai'}
 
 		CRITICAL AGENCY-LEVEL STRUCTURE:
-		1. 🪝 THE HOOK: A highly catchy headline or question that stops the user from scrolling.
-		2. ✨ VALUE & DESIRE: Highlight the key benefits, aesthetic, and emotional mood based ONLY on the visual details of the image. Make the reader want it.
-		3. 🎯 THE STORY/DETAILS: Brief, engaging details about the product's quality, texture, or vibe.
-		4. 🚀 CALL TO ACTION (CTA): A clear, urgent next step (e.g., Click the link, Inbox us, Tag a friend, Shop now).
-		5. 🏷️ HASHTAGS: 5-8 highly relevant, trendy marketing hashtags.
+		1. THE HOOK: A highly catchy headline that specifically calls out the Target Audience and aligns with the Campaign Objective.
+		2. VALUE & DESIRE: Highlight the key benefits based on the visual details of the image. Make the Target Audience deeply desire it.
+		3. THE OFFER: If a Promotion is provided, emphasize it clearly and create urgency.
+		4. CALL TO ACTION (CTA): A clear next step tailored exactly to the Campaign Objective (e.g., 'Click to buy' for Conversion, 'Tag a friend' for Engagement).
+		5. HASHTAGS: 5-8 highly relevant, trendy marketing hashtags.
 
 		RULES:
 		- You MUST write the entire copy in the specified Output Language: ${language || 'Thai'}.
-		- If writing in Thai, use natural, modern, and trendy marketing vocabulary (ภาษาการตลาดที่สละสลวย กระตุ้นความสนใจ).
-		- Adapt the paragraph length and style specifically for ${platform}.
-		- Use appropriate emojis to format and break up the text beautifully.
-		- Output ONLY the final campaign text. Do not include introductory or concluding conversational text.`;
+		- If writing in Thai, use natural, modern, and trendy marketing vocabulary.
+		- Output ONLY the final campaign text. Do not include conversational text or Markdown blocks for the entire output.`;
 
 		console.log("Sending image and prompt to Gemini...");
 		const response = await client.request({
