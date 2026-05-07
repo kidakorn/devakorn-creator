@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import {
-	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert, Zap
+	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert, Zap,
+	Camera, Palette, Sun // 🟢 เพิ่มไอคอนใหม่
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -13,6 +14,11 @@ const CATEGORIES = [
 	"None", "Product Photography", "T-Shirt Design", "Sticker & Die-cut",
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon"
 ];
+
+// 🟢 เพิ่มตัวเลือกสำหรับฟีเจอร์ใหม่
+const styleOptions = ['None', 'Cinematic', 'Muji Style', 'Cyberpunk', 'Anime', 'Vintage', '3D Animation', 'Realistic', 'Fantasy'];
+const cameraOptions = ['None', 'Drone View', 'Close-up', 'Wide Angle', 'Macro', 'Tracking Shot', 'Pan', 'First-Person View (FPV)'];
+const lightingOptions = ['None', 'Cinematic Lighting', 'Natural Light', 'Neon', 'Golden Hour', 'Studio Lighting', 'Dark & Moody'];
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -24,6 +30,11 @@ export default function ImageStudio() {
 	const [isGenerating, setIsLoading] = useState(false);
 	const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 	const [aspectRatio, setAspectRatio] = useState("1:1");
+
+	// 🟢 เพิ่ม State สำหรับเก็บค่าฟีเจอร์ใหม่
+	const [style, setStyle] = useState('None');
+	const [cameraAngle, setCameraAngle] = useState('None');
+	const [lighting, setLighting] = useState('None');
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -80,6 +91,11 @@ export default function ImageStudio() {
 			formData.append('aspectRatio', aspectRatio);
 			formData.append('category', selectedCategory);
 			formData.append('quality', quality);
+
+			// 🟢 ส่งค่าฟีเจอร์ใหม่แนบไปกับ FormData
+			formData.append('style', style);
+			formData.append('cameraAngle', cameraAngle);
+			formData.append('lighting', lighting);
 
 			if (selectedFile) {
 				formData.append('image', selectedFile);
@@ -144,11 +160,9 @@ export default function ImageStudio() {
 
 	return (
 		<DashboardLayout>
-			{/* 🟢 คลีน Wrapper นอกสุดให้เรียบง่าย ไม่ต้องมี flex หรือ h-screen มากวน */}
 			<div className="w-full pb-12 animate-in fade-in duration-500">
-				
+
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-					{/* Left Panel: Controls (ใช้ col-span-4 ปกติโดยไม่ต้องยัด w-full เข้าไปตีกัน) */}
 					<div className="lg:col-span-4 space-y-6">
 						<div>
 							<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
@@ -161,7 +175,7 @@ export default function ImageStudio() {
 						</div>
 
 						<div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-7">
-							
+
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
 									<Zap className="w-4 h-4 text-primary-red" /> Render Quality
@@ -207,6 +221,46 @@ export default function ImageStudio() {
 											{cat}
 										</button>
 									))}
+								</div>
+							</div>
+
+							{/* 🟢 ส่วน Advanced Settings ที่เพิ่มเข้ามาให้ Image Studio */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Palette className="w-3.5 h-3.5 text-primary-red" /> Style
+									</label>
+									<select
+										value={style}
+										onChange={(e) => setStyle(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{styleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Camera className="w-3.5 h-3.5 text-primary-red" /> Angle
+									</label>
+									<select
+										value={cameraAngle}
+										onChange={(e) => setCameraAngle(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{cameraOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Sun className="w-3.5 h-3.5 text-primary-red" /> Lighting
+									</label>
+									<select
+										value={lighting}
+										onChange={(e) => setLighting(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{lightingOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
 								</div>
 							</div>
 
@@ -307,8 +361,6 @@ export default function ImageStudio() {
 						</div>
 					</div>
 
-					{/* Right Panel: Preview Area */}
-					{/* 🟢 ใช้ col-span-8 คู่กับ min-h-[600px] ที่ Tailwind รู้จักชัวร์ๆ */}
 					<div className="lg:col-span-8 bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center relative overflow-hidden min-h-150 shadow-sm">
 						<div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#000_1px,transparent_1px)] bg-size-[16px_16px] pointer-events-none"></div>
 

@@ -55,6 +55,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  
   // 🟢 1. เปลี่ยนค่าเริ่มต้นเป็น 0 ป้องกันการสมัครปุ๊บได้ปั๊บ
   coinBalance   Int       @default(0)
 
@@ -138,13 +139,14 @@ model Comment {
 
 enum TransactionType {
   TOPUP
+  TOPUP_SLIP           // 🟢 เพิ่มประเภทสำหรับการเติมเงินผ่านสลิป
   SPEND_IMAGE
   SPEND_VIDEO
   SPEND_PROMPT
   REFUND
-  FREE_BONUS // เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
+  FREE_BONUS           // เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
   SPEND_CAMPAIGN
-  EARN_CREATOR_REWARD // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
+  EARN_CREATOR_REWARD  // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
   EARN_SUPPORTER_BONUS // 🟢 โบนัสเล็กๆ น้อยๆ สำหรับคนช่วยกด Like/Comment สร้าง Viral Loop
   DAILY_CHECKIN
 }
@@ -165,6 +167,7 @@ model Transaction {
   balanceAfter Int
   description  String?
   referenceId  String?           @unique
+  slipRef      String?           @unique // 🟢 เพิ่มฟิลด์นี้สำหรับเก็บรหัสอ้างอิงสลิปจาก Thunder API ป้องกันสลิปซ้ำ
   status       TransactionStatus @default(COMPLETED)
   createdAt    DateTime          @default(now())
 }

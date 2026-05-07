@@ -13,7 +13,10 @@ import {
 	Play,
 	Monitor,
 	Clapperboard,
-	ShieldAlert
+	ShieldAlert,
+	Camera,     // 🟢 เพิ่ม Icon ใหม่
+	Palette,    // 🟢 เพิ่ม Icon ใหม่
+	Sun         // 🟢 เพิ่ม Icon ใหม่
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -26,6 +29,11 @@ const categories = [
 	'B-Roll Footage'
 ];
 
+// 🟢 เพิ่มตัวเลือกสำหรับฟีเจอร์ใหม่
+const styleOptions = ['None', 'Cinematic', 'Muji Style', 'Cyberpunk', 'Anime', 'Vintage', '3D Animation', 'Realistic', 'Fantasy'];
+const cameraOptions = ['None', 'Drone View', 'Close-up', 'Wide Angle', 'Macro', 'Tracking Shot', 'Pan', 'First-Person View (FPV)'];
+const lightingOptions = ['None', 'Cinematic Lighting', 'Natural Light', 'Neon', 'Golden Hour', 'Studio Lighting', 'Dark & Moody'];
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function VideoCreatorPage() {
@@ -33,6 +41,11 @@ export default function VideoCreatorPage() {
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
+
+	// 🟢 เพิ่ม State สำหรับเก็บค่าฟีเจอร์ใหม่
+	const [style, setStyle] = useState('None');
+	const [cameraAngle, setCameraAngle] = useState('None');
+	const [lighting, setLighting] = useState('None');
 
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -46,10 +59,9 @@ export default function VideoCreatorPage() {
 	const currentCoins = balanceData?.coinBalance ?? 0;
 	const isBanned = balanceData?.isBanned ?? false;
 
-	// 🟢 กำหนดราคาเดียวคือ 799 Coins
-	const currentCost = 799;
+	// 🟢 ปรับลดราคาลงมาเหลือ 499 Coins ตามแผน
+	const currentCost = 499;
 
-	// 🟢 ตรวจสอบว่ายอดเหรียญพอไหม
 	const isButtonDisabled = isGenerating || !prompt || currentCoins < currentCost || isBanned;
 
 	const handleGenerate = async () => {
@@ -66,8 +78,10 @@ export default function VideoCreatorPage() {
 				body: JSON.stringify({
 					prompt,
 					category: selectedCategory,
-					aspectRatio: aspectRatio
-					// 🟢 ไม่ต้องส่ง quality ไปแล้ว
+					aspectRatio: aspectRatio,
+					style: style,               // 🟢 ส่งค่า Style ไปให้ API
+					cameraAngle: cameraAngle,   // 🟢 ส่งค่า Camera Angle ไปให้ API
+					lighting: lighting          // 🟢 ส่งค่า Lighting ไปให้ API
 				}),
 			});
 
@@ -168,13 +182,13 @@ export default function VideoCreatorPage() {
 									<div className="flex gap-4">
 										<button
 											onClick={() => setAspectRatio('16:9')}
-											className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
+											className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
 										>
 											YouTube (16:9)
 										</button>
 										<button
 											onClick={() => setAspectRatio('9:16')}
-											className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
+											className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
 										>
 											TikTok / IG (9:16)
 										</button>
@@ -190,7 +204,7 @@ export default function VideoCreatorPage() {
 											<button
 												key={cat}
 												onClick={() => setSelectedCategory(cat)}
-												className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${selectedCategory === cat ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-red-300 hover:bg-red-50'}`}
+												className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-red-300 hover:bg-red-50'}`}
 											>
 												{cat}
 											</button>
@@ -198,19 +212,58 @@ export default function VideoCreatorPage() {
 									</div>
 								</div>
 
+								{/* 🟢 ส่วน Advanced Settings ที่เพิ่มเข้ามา */}
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+									<div>
+										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
+											<Palette className="w-3.5 h-3.5" /> Style
+										</label>
+										<select
+											value={style}
+											onChange={(e) => setStyle(e.target.value)}
+											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
+										>
+											{styleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										</select>
+									</div>
+									<div>
+										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
+											<Camera className="w-3.5 h-3.5" /> Camera Angle
+										</label>
+										<select
+											value={cameraAngle}
+											onChange={(e) => setCameraAngle(e.target.value)}
+											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
+										>
+											{cameraOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										</select>
+									</div>
+									<div>
+										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
+											<Sun className="w-3.5 h-3.5" /> Lighting
+										</label>
+										<select
+											value={lighting}
+											onChange={(e) => setLighting(e.target.value)}
+											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
+										>
+											{lightingOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										</select>
+									</div>
+								</div>
+
 								<div>
 									<label className="block text-sm font-bold text-gray-700 mb-2">Product & Scene Description</label>
 									<textarea
-										rows={5}
+										rows={4}
 										className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none resize-none transition-all"
-										placeholder="Describe your product scene... (e.g. 4k resolution, cinematic lighting)"
+										placeholder="Describe your product scene... (e.g. A premium perfume bottle on a wooden table)"
 										value={prompt}
 										onChange={(e) => setPrompt(e.target.value)}
 									/>
 								</div>
 
 								<div>
-									{/* แจ้งเตือนสถานะแบน */}
 									{isBanned && (
 										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
 											<ShieldAlert className="w-4 h-4" /> Account Suspended

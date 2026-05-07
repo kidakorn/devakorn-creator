@@ -34,12 +34,13 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 รับค่าจากหน้าเว็บ (ไม่ต้องรับ quality แล้ว)
-		const { prompt, category, aspectRatio } = await req.json();
+		// 🟢 รับพารามิเตอร์ที่ยืดหยุ่นมากขึ้นจากหน้าเว็บ
+		const { prompt, category, aspectRatio, cameraAngle, style, lighting } = await req.json();
+		
 		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
 
-		// 🟢 กำหนดราคาเดียว 799 Coins
-		const COST_PER_VIDEO = 799;
+		// ราคาปรับลดลงมาแล้วตามที่คุณแก้ไว้
+		const COST_PER_VIDEO = 499;
 
 		if (user.coinBalance < COST_PER_VIDEO) {
 			return NextResponse.json({
@@ -48,21 +49,24 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 ปรับแต่ง Prompt โดยเอาคำว่า 4K ออก ปล่อยให้ลูกค้ากำหนดเอง
-		const styleModifier = "Masterpiece, highly detailed, sharp focus, cinematic lighting, high-quality product showcase";
-		const finalPrompt = `${prompt}, Commercial Video Style: ${category}, ${styleModifier}`;
+		// 🟢 สร้าง Prompt แบบ Dynamic (ถ้าผู้ใช้ไม่ได้เลือกมา ก็จะไม่ใส่เข้าไปให้รก)
+		let finalPrompt = prompt;
+		if (category && category !== "None") finalPrompt += `, Category: ${category}`;
+		if (style && style !== "None") finalPrompt += `, Style: ${style}`;
+		if (cameraAngle && cameraAngle !== "None") finalPrompt += `, Camera: ${cameraAngle}`;
+		if (lighting && lighting !== "None") finalPrompt += `, Lighting: ${lighting}`;
 
-		// 🟢 โหลดสิทธิ์จากไฟล์ json ของ Google Cloud โดยตรง (เสถียรกว่า)
+		// โหลดสิทธิ์จากไฟล์ json ของ Google Cloud
 		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
 		process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 
 		const client = new GoogleGenAI({ vertexai: true, project: 'devakorn-creator-ai', location: 'us-central1' });
 		const storage = new Storage({ keyFilename: keyPath });
 
-		console.log(`[1/3] Submitting video job to Veo AI (Price: 799 Coins)...`);
+		console.log(`[1/3] Submitting video job to Veo AI (Price: ${COST_PER_VIDEO} Coins)...`);
 		let operation = await client.models.generateVideos({
 			model: 'veo-3.1-generate-001',
-			prompt: finalPrompt,
+			prompt: finalPrompt, // ส่ง Prompt ที่ผู้ใช้มีอิสระในการปรุงแต่งเอง
 			config: { aspectRatio: aspectRatio || "16:9" }
 		});
 
@@ -127,7 +131,7 @@ export async function POST(req: Request) {
 					type: 'SPEND_VIDEO',
 					amount: -COST_PER_VIDEO,
 					balanceAfter: user.coinBalance - COST_PER_VIDEO,
-					description: `Video Ad Creation: ${finalPrompt.substring(0, 30)}...`,
+					description: `Video Ad Creation: ${prompt.substring(0, 30)}...`,
 					status: 'COMPLETED',
 				}
 			})

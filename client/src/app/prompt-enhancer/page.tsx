@@ -4,13 +4,18 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
-import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert } from "lucide-react";
+import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert, Type, AlignLeft, Globe } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const CATEGORIES = [
 	"Product Photography", "T-Shirt Design", "Sticker & Die-cut",
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon", "Product Mockup"
 ];
+
+// 🟢 ตัวเลือกสำหรับฟีเจอร์ Advanced Settings
+const toneOptions = ['Creative & Professional', 'Direct & Minimalist', 'Dramatic & Cinematic', 'Cute & Friendly', 'Luxury & Elegant', 'Tech & Futuristic'];
+const lengthOptions = ['Short (around 20-30 words)', 'Medium (around 50-80 words)', 'Long (around 100-150 words)'];
+const languageOptions = ['English', 'Thai', 'Japanese', 'Chinese', 'Korean'];
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -21,6 +26,11 @@ export default function PromptEnhancerPage() {
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
+
+	// 🟢 State สำหรับเก็บค่า Advanced Settings
+	const [tone, setTone] = useState("Creative & Professional");
+	const [length, setLength] = useState("Medium (around 50-80 words)");
+	const [outputLanguage, setOutputLanguage] = useState("English");
 
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
@@ -44,15 +54,21 @@ export default function PromptEnhancerPage() {
 			const response = await fetch('/api/generate/enhance-prompt', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ idea, category: selectedCategory }),
+				// 🟢 ส่งพารามิเตอร์ใหม่ไปให้ API
+				body: JSON.stringify({ 
+					idea, 
+					category: selectedCategory,
+					tone,
+					length,
+					outputLanguage
+				}),
 			});
 
 			const data = await response.json();
 
 			if (response.ok && data.status === 'success') {
-				setEnhancedPrompt(data.prompt);
-
-				// 🟢 ล้างกล่องข้อความให้ว่างทันทีที่เจนสำเร็จ
+				// 🟢 อัปเดตให้รองรับคีย์ enhancedPrompt จาก API หลังบ้านใหม่
+				setEnhancedPrompt(data.enhancedPrompt || data.prompt);
 				setIdea("");
 
 				if (data.remainingCoins !== undefined) {
@@ -102,7 +118,7 @@ export default function PromptEnhancerPage() {
 							<p className="text-xs text-text-main/50 font-medium">Define your product idea and asset type.</p>
 						</div>
 
-						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-6">
+						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-5">
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
@@ -124,8 +140,48 @@ export default function PromptEnhancerPage() {
 								</div>
 							</div>
 
+							{/* 🟢 ส่วน Advanced Settings สำหรับกำหนดทิศทาง Prompt */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Type className="w-3.5 h-3.5 text-primary-red" /> Tone
+									</label>
+									<select 
+										value={tone} 
+										onChange={(e) => setTone(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{toneOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<AlignLeft className="w-3.5 h-3.5 text-primary-red" /> Length
+									</label>
+									<select 
+										value={length} 
+										onChange={(e) => setLength(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{lengthOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Globe className="w-3.5 h-3.5 text-primary-red" /> Output Language
+									</label>
+									<select 
+										value={outputLanguage} 
+										onChange={(e) => setOutputLanguage(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{languageOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+							</div>
+
 							<div className="space-y-3 flex-1 flex flex-col">
-								<label className="text-sm font-bold text-dark-bg">Core Idea</label>
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">Core Idea</label>
 								<textarea
 									rows={4}
 									value={idea}
@@ -133,7 +189,6 @@ export default function PromptEnhancerPage() {
 									placeholder="e.g., A luxury perfume bottle with floral scent..."
 									className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
 								/>
-								{/* 🟢 คลีน Pro Tip ออกเรียบร้อยครับ */}
 							</div>
 
 							<div className="mt-auto">
