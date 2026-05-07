@@ -44,3 +44,11 @@ next-env.d.ts
 
 vertex-key.json
 stripe.exe
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
