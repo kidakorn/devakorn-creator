@@ -34,15 +34,16 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 Receive FormData to support image uploads
+		// Receive FormData to support image uploads
 		const formData = await req.formData();
 		const prompt = formData.get('prompt') as string;
 		const category = formData.get('category') as string;
 		const aspectRatio = formData.get('aspectRatio') as string;
-		const duration = formData.get('duration') as string; // 🟢 Get duration from frontend
+		const duration = formData.get('duration') as string; // Get duration from frontend
 		const cameraAngle = formData.get('cameraAngle') as string;
 		const style = formData.get('style') as string;
 		const lighting = formData.get('lighting') as string;
+		const presenter = formData.get('presenter') as string;
 		const imageFile = formData.get('image') as File | null;
 		
 		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 Process Image if uploaded (Convert to Base64 for Veo AI)
+		// Process Image if uploaded (Convert to Base64 for Veo AI)
 		let inputImageBase64 = undefined;
 		let inputImageMimeType = undefined;
 		if (imageFile) {
@@ -66,12 +67,13 @@ export async function POST(req: Request) {
 			inputImageMimeType = imageFile.type;
 		}
 
-		// 🟢 Dynamic Prompt construction
+		// Dynamic Prompt construction
 		let finalPrompt = prompt;
 		if (category && category !== "None") finalPrompt += `, Category: ${category}`;
 		if (style && style !== "None") finalPrompt += `, Style: ${style}`;
 		if (cameraAngle && cameraAngle !== "None") finalPrompt += `, Camera: ${cameraAngle}`;
 		if (lighting && lighting !== "None") finalPrompt += `, Lighting: ${lighting}`;
+		if (presenter && presenter !== "None") finalPrompt += `, Feature a highly realistic ${presenter} holding or interacting with the product`;
 		if (duration) finalPrompt += `. Ensure the video duration is exactly ${duration} seconds long.`;
 
 		// Load credentials

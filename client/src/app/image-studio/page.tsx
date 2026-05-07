@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import {
 	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert, Zap,
-	Camera, Palette, Sun // 🟢 เพิ่มไอคอนใหม่
+	Camera, Palette, Sun, Layers, User // Added icons
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -15,10 +15,11 @@ const CATEGORIES = [
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon"
 ];
 
-// 🟢 เพิ่มตัวเลือกสำหรับฟีเจอร์ใหม่
+// Options for new features
 const styleOptions = ['None', 'Cinematic', 'Muji Style', 'Cyberpunk', 'Anime', 'Vintage', '3D Animation', 'Realistic', 'Fantasy'];
 const cameraOptions = ['None', 'Drone View', 'Close-up', 'Wide Angle', 'Macro', 'Tracking Shot', 'Pan', 'First-Person View (FPV)'];
 const lightingOptions = ['None', 'Cinematic Lighting', 'Natural Light', 'Neon', 'Golden Hour', 'Studio Lighting', 'Dark & Moody'];
+const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Caucasian Male Model', 'Minimalist Hand Model', 'Lifestyle Group'];
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -31,15 +32,18 @@ export default function ImageStudio() {
 	const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 	const [aspectRatio, setAspectRatio] = useState("1:1");
 
-	// 🟢 เพิ่ม State สำหรับเก็บค่าฟีเจอร์ใหม่
+	// State for Advanced Settings
 	const [style, setStyle] = useState('None');
 	const [cameraAngle, setCameraAngle] = useState('None');
 	const [lighting, setLighting] = useState('None');
+	const [presenter, setPresenter] = useState('None');
 
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
 	const [quality, setQuality] = useState<'fast' | 'pro'>('pro');
+	const [generationMode, setGenerationMode] = useState<'standard' | 'bg_replacement'>('standard');
+	const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
 
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
@@ -78,6 +82,35 @@ export default function ImageStudio() {
 		if (fileInput) fileInput.value = '';
 	};
 
+	const handleAutoPrompt = async () => {
+		if (!prompt) return alert("Please type a short idea first.");
+		setIsEnhancingPrompt(true);
+		try {
+			const response = await fetch('/api/generate/enhance-prompt', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ 
+					idea: prompt, 
+					category: selectedCategory,
+					tone: 'Creative & Professional',
+					length: 'Medium (around 50-80 words)',
+					outputLanguage: 'English'
+				}),
+			});
+			const data = await response.json();
+			if (response.ok && data.status === 'success') {
+				setPrompt(data.enhancedPrompt || data.prompt);
+			} else {
+				alert("Error: " + data.message);
+			}
+		} catch (error) {
+			console.error(error);
+			alert("Cannot connect to AI.");
+		} finally {
+			setIsEnhancingPrompt(false);
+		}
+	};
+
 	const handleGenerate = async () => {
 		if (isBanned) return alert("Your account has been suspended.");
 		if (!prompt) return alert("Please describe your product.");
@@ -92,10 +125,11 @@ export default function ImageStudio() {
 			formData.append('category', selectedCategory);
 			formData.append('quality', quality);
 
-			// 🟢 ส่งค่าฟีเจอร์ใหม่แนบไปกับ FormData
+			// Send advanced settings within FormData
 			formData.append('style', style);
 			formData.append('cameraAngle', cameraAngle);
 			formData.append('lighting', lighting);
+			formData.append('presenter', presenter);
 
 			if (selectedFile) {
 				formData.append('image', selectedFile);
@@ -206,6 +240,26 @@ export default function ImageStudio() {
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+									<Layers className="w-4 h-4 text-primary-red" /> Generation Mode
+								</label>
+								<div className="flex gap-4">
+									<button
+										onClick={() => setGenerationMode('standard')}
+										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl transition-all border ${generationMode === 'standard' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white'}`}
+									>
+										<span className="text-xs font-black">Standard Generation</span>
+									</button>
+									<button
+										onClick={() => setGenerationMode('bg_replacement')}
+										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl transition-all border ${generationMode === 'bg_replacement' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white'}`}
+									>
+										<span className="text-xs font-black">AI Background Replacement</span>
+									</button>
+								</div>
+							</div>
+
+							<div className="space-y-3">
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
 									<Tags className="w-4 h-4 text-primary-red" /> Product Asset Type
 								</label>
 								<div className="flex flex-wrap gap-2">
@@ -224,8 +278,20 @@ export default function ImageStudio() {
 								</div>
 							</div>
 
-							{/* 🟢 ส่วน Advanced Settings ที่เพิ่มเข้ามาให้ Image Studio */}
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+							{/* Advanced Settings */}
+							<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<User className="w-3.5 h-3.5 text-primary-red" /> Presenter
+									</label>
+									<select
+										value={presenter}
+										onChange={(e) => setPresenter(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{presenterOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
 										<Palette className="w-3.5 h-3.5 text-primary-red" /> Style
@@ -265,15 +331,25 @@ export default function ImageStudio() {
 							</div>
 
 							<div className="space-y-3">
-								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Wand2 className="w-4 h-4 text-primary-red" />
-									Core Product Idea
-								</label>
+								<div className="flex items-center justify-between">
+									<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
+										<Wand2 className="w-4 h-4 text-primary-red" />
+										Core Product Idea
+									</label>
+									<button 
+										onClick={handleAutoPrompt}
+										disabled={isEnhancingPrompt || !prompt}
+										className="text-xs font-bold text-primary-red bg-primary-red/10 hover:bg-primary-red/20 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
+									>
+										{isEnhancingPrompt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+										Let AI Think
+									</button>
+								</div>
 								<textarea
 									rows={4}
 									value={prompt}
 									onChange={(e) => setPrompt(e.target.value)}
-									placeholder="e.g., A minimalist ceramic coffee mug, natural light..."
+									placeholder="e.g., A minimalist ceramic coffee mug... (Or paste a Shopee/Lazada URL and click 'Let AI Think')"
 									className="w-full bg-light-gray/50 border border-gray-200 rounded-lg p-4 text-sm text-dark-bg placeholder:text-text-main/40 focus:border-primary-red/50 focus:ring-4 focus:ring-primary-red/10 outline-none transition-all resize-none"
 								/>
 							</div>
@@ -281,7 +357,7 @@ export default function ImageStudio() {
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
 									<UploadCloud className="w-4 h-4 text-primary-red" />
-									Reference Sketch <span className="text-text-main/40 font-normal">(Optional)</span>
+									{generationMode === 'bg_replacement' ? 'Product Image (Required)' : 'Reference Sketch (Optional)'}
 								</label>
 
 								{!imagePreview ? (

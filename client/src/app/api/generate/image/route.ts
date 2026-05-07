@@ -32,7 +32,7 @@ export async function POST(req: Request) {
             }, { status: 403 });
         }
 
-        // 🟢 รับพารามิเตอร์ที่ยืดหยุ่นมากขึ้นจากหน้าเว็บ (รับแบบ FormData เพราะหน้าเว็บมีการอัปโหลดไฟล์)
+        // Receive flexible parameters from frontend (FormData since there's file upload)
         const formData = await req.formData();
         const prompt = formData.get('prompt') as string;
         const category = formData.get('category') as string;
@@ -40,31 +40,33 @@ export async function POST(req: Request) {
         const cameraAngle = formData.get('cameraAngle') as string;
         const style = formData.get('style') as string;
         const lighting = formData.get('lighting') as string;
+        const presenter = formData.get('presenter') as string;
         const quality = formData.get('quality') as string;
         
         if (!prompt) return NextResponse.json({ status: "error", message: "Please provide an image prompt." }, { status: 400 });
 
-        // 🟢 คิดราคาเหรียญตาม Render Quality ที่เลือก (pro = 49, fast = 29)
+        // Calculate cost based on Render Quality (pro = 49, fast = 29)
         const COST_PER_IMAGE = quality === 'pro' ? 49 : 29; 
         
         if (user.coinBalance < COST_PER_IMAGE) {
             return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
         }
 
-        // 🟢 สร้าง Prompt แบบ Dynamic: ประกอบคำสั่งใหม่ตามค่าที่ User เลือกมาจากหน้าบ้าน
+        // Dynamic Prompt construction: Assemble new command based on User's choices
         let finalPrompt = prompt;
         if (category && category !== "None") finalPrompt += `, Category: ${category}`;
         if (style && style !== "None") finalPrompt += `, Style: ${style}`;
         if (cameraAngle && cameraAngle !== "None") finalPrompt += `, Camera: ${cameraAngle}`;
         if (lighting && lighting !== "None") finalPrompt += `, Lighting: ${lighting}`;
+        if (presenter && presenter !== "None") finalPrompt += `, Feature a highly photorealistic ${presenter} holding or interacting with the product`;
 
-        // โหลดสิทธิ์จากไฟล์ json ของ Google Cloud
+        // Load credentials from Google Cloud json file
         const keyPath = path.resolve(process.cwd(), "vertex-key.json");
         const auth = new GoogleAuth({ keyFile: keyPath, scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
         const client = await auth.getClient();
         const projectId = await auth.getProjectId();
         const location = 'us-central1';
-        const selectedModel = 'imagen-3.0-generate-001'; // ปรับเป็น Imagen 3 รุ่นล่าสุด
+        const selectedModel = 'imagen-3.0-generate-001'; // Update to latest Imagen 3
 
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:predict`;
 

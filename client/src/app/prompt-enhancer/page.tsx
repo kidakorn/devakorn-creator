@@ -12,7 +12,7 @@ const CATEGORIES = [
 	"Packaging Design", "Seamless Pattern", "Logo Concept", "3D Icon", "Product Mockup"
 ];
 
-// 🟢 ตัวเลือกสำหรับฟีเจอร์ Advanced Settings
+// Advanced Settings Options
 const toneOptions = ['Creative & Professional', 'Direct & Minimalist', 'Dramatic & Cinematic', 'Cute & Friendly', 'Luxury & Elegant', 'Tech & Futuristic'];
 const lengthOptions = ['Short (around 20-30 words)', 'Medium (around 50-80 words)', 'Long (around 100-150 words)'];
 const languageOptions = ['English', 'Thai', 'Japanese', 'Chinese', 'Korean'];
@@ -27,7 +27,7 @@ export default function PromptEnhancerPage() {
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
 
-	// 🟢 State สำหรับเก็บค่า Advanced Settings
+	// State for Advanced Settings
 	const [tone, setTone] = useState("Creative & Professional");
 	const [length, setLength] = useState("Medium (around 50-80 words)");
 	const [outputLanguage, setOutputLanguage] = useState("English");
@@ -54,7 +54,7 @@ export default function PromptEnhancerPage() {
 			const response = await fetch('/api/generate/enhance-prompt', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				// 🟢 ส่งพารามิเตอร์ใหม่ไปให้ API
+				// Send new parameters to API
 				body: JSON.stringify({ 
 					idea, 
 					category: selectedCategory,
@@ -67,7 +67,7 @@ export default function PromptEnhancerPage() {
 			const data = await response.json();
 
 			if (response.ok && data.status === 'success') {
-				// 🟢 อัปเดตให้รองรับคีย์ enhancedPrompt จาก API หลังบ้านใหม่
+				// Update to support new API response key
 				setEnhancedPrompt(data.enhancedPrompt || data.prompt);
 				setIdea("");
 
@@ -140,7 +140,7 @@ export default function PromptEnhancerPage() {
 								</div>
 							</div>
 
-							{/* 🟢 ส่วน Advanced Settings สำหรับกำหนดทิศทาง Prompt */}
+							{/* Advanced Settings */}
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">

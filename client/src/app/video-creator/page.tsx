@@ -16,10 +16,13 @@ import {
 	ShieldAlert,
 	Camera,     
 	Palette,    
-	Sun,
 	UploadCloud,
 	X,
-	Gamepad2
+	Gamepad2,
+	Wand2,
+	Sparkles,
+	Sun,
+	User
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -32,10 +35,11 @@ const categories = [
 	'B-Roll Footage'
 ];
 
-// 🟢 เพิ่มตัวเลือกสำหรับฟีเจอร์ใหม่
+// Added options for new features
 const styleOptions = ['None', 'Cinematic', 'Muji Style', 'Cyberpunk', 'Anime', 'Vintage', '3D Animation', 'Realistic', 'Fantasy'];
 const cameraOptions = ['None', 'Drone View', 'Close-up', 'Wide Angle', 'Macro', 'Tracking Shot', 'Pan', 'First-Person View (FPV)'];
 const lightingOptions = ['None', 'Cinematic Lighting', 'Natural Light', 'Neon', 'Golden Hour', 'Studio Lighting', 'Dark & Moody'];
+const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Caucasian Male Model', 'Minimalist Hand Model', 'Lifestyle Group'];
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -44,24 +48,28 @@ export default function VideoCreatorPage() {
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
-	const [duration, setDuration] = useState('10'); // 🟢 Added state for video duration
+	const [duration, setDuration] = useState('10'); // Added state for video duration
 
 	// Advanced Settings State
 	const [style, setStyle] = useState('None');
 	const [cameraAngle, setCameraAngle] = useState('None');
 	const [lighting, setLighting] = useState('None');
+	const [presenter, setPresenter] = useState('None');
 
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [videoUrl, setVideoUrl] = useState<string | null>(null);
 	const [isDownloading, setIsDownloading] = useState(false);
 
-	// 🟢 State สำหรับ Upload Image Reference
+	// State for Upload Image Reference
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-	// 🟢 State สำหรับ Minigame ยามรอ
+	// State for Minigame
 	const [score, setScore] = useState(0);
 	const [targetPos, setTargetPos] = useState({ top: '40%', left: '40%' });
+
+	// State for Auto Prompt
+	const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
 
 	React.useEffect(() => {
 		let interval: NodeJS.Timeout;
@@ -89,6 +97,35 @@ export default function VideoCreatorPage() {
 
 	const isButtonDisabled = isGenerating || !prompt || currentCoins < currentCost || isBanned;
 
+	const handleAutoPrompt = async () => {
+		if (!prompt) return alert("Please type a short idea first.");
+		setIsEnhancingPrompt(true);
+		try {
+			const response = await fetch('/api/generate/enhance-prompt', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ 
+					idea: prompt, 
+					category: selectedCategory,
+					tone: 'Dramatic & Cinematic',
+					length: 'Medium (around 50-80 words)',
+					outputLanguage: 'English'
+				}),
+			});
+			const data = await response.json();
+			if (response.ok && data.status === 'success') {
+				setPrompt(data.enhancedPrompt || data.prompt);
+			} else {
+				alert("Error: " + data.message);
+			}
+		} catch (error) {
+			console.error(error);
+			alert("Cannot connect to AI.");
+		} finally {
+			setIsEnhancingPrompt(false);
+		}
+	};
+
 	const handleGenerate = async () => {
 		if (isBanned) return alert("Your account has been suspended.");
 		if (!prompt) return alert("Please describe your video scene.");
@@ -101,10 +138,11 @@ export default function VideoCreatorPage() {
 			formData.append('prompt', prompt);
 			formData.append('category', selectedCategory);
 			formData.append('aspectRatio', aspectRatio);
-			formData.append('duration', duration); // 🟢 Append duration to formData
+			formData.append('duration', duration); // Append duration to formData
 			formData.append('style', style);
 			formData.append('cameraAngle', cameraAngle);
 			formData.append('lighting', lighting);
+			formData.append('presenter', presenter);
 			
 			if (selectedFile) {
 				formData.append('image', selectedFile);
@@ -262,8 +300,20 @@ export default function VideoCreatorPage() {
 									</div>
 								</div>
 
-								{/* 🟢 ส่วน Advanced Settings ที่เพิ่มเข้ามา */}
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+								{/* Advanced Settings */}
+								<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+									<div>
+										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
+											<User className="w-3.5 h-3.5 text-red-600" /> Presenter
+										</label>
+										<select
+											value={presenter}
+											onChange={(e) => setPresenter(e.target.value)}
+											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
+										>
+											{presenterOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										</select>
+									</div>
 									<div>
 										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
 											<Palette className="w-3.5 h-3.5" /> Style
@@ -303,11 +353,24 @@ export default function VideoCreatorPage() {
 								</div>
 
 								<div>
-									<label className="block text-sm font-bold text-gray-700 mb-2">Product & Scene Description</label>
+									<div className="flex items-center justify-between mb-2">
+										<label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+											<Clapperboard className="w-4 h-4 text-red-600" />
+											Product & Scene Description
+										</label>
+										<button 
+											onClick={handleAutoPrompt}
+											disabled={isEnhancingPrompt || !prompt}
+											className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
+										>
+											{isEnhancingPrompt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+											Let AI Think
+										</button>
+									</div>
 									<textarea
 										rows={4}
 										className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 text-sm text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none resize-none transition-all"
-										placeholder="Describe your product scene... (e.g. A premium perfume bottle on a wooden table)"
+										placeholder="Describe your product scene... (Or paste a Shopee/Lazada URL and click 'Let AI Think')"
 										value={prompt}
 										onChange={(e) => setPrompt(e.target.value)}
 									/>
@@ -402,7 +465,7 @@ export default function VideoCreatorPage() {
 													style={{ top: targetPos.top, left: targetPos.left, transition: 'top 0.4s ease-out, left 0.4s ease-out' }}
 													onMouseDown={() => setScore(s => s + 1)}
 												>
-													<span className="text-xs">✨</span>
+													<span className="text-xs">X</span>
 												</div>
 											</div>
 											
