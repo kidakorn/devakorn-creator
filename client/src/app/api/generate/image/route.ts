@@ -32,12 +32,21 @@ export async function POST(req: Request) {
             }, { status: 403 });
         }
 
-        // 🟢 รับพารามิเตอร์ที่ยืดหยุ่นมากขึ้นจากหน้าเว็บ
-        const { prompt, category, aspectRatio, cameraAngle, style, lighting } = await req.json();
+        // 🟢 รับพารามิเตอร์ที่ยืดหยุ่นมากขึ้นจากหน้าเว็บ (รับแบบ FormData เพราะหน้าเว็บมีการอัปโหลดไฟล์)
+        const formData = await req.formData();
+        const prompt = formData.get('prompt') as string;
+        const category = formData.get('category') as string;
+        const aspectRatio = formData.get('aspectRatio') as string;
+        const cameraAngle = formData.get('cameraAngle') as string;
+        const style = formData.get('style') as string;
+        const lighting = formData.get('lighting') as string;
+        const quality = formData.get('quality') as string;
         
         if (!prompt) return NextResponse.json({ status: "error", message: "Please provide an image prompt." }, { status: 400 });
 
-        const COST_PER_IMAGE = 29; 
+        // 🟢 คิดราคาเหรียญตาม Render Quality ที่เลือก (pro = 49, fast = 29)
+        const COST_PER_IMAGE = quality === 'pro' ? 49 : 29; 
+        
         if (user.coinBalance < COST_PER_IMAGE) {
             return NextResponse.json({ status: "error", message: `Not enough coins! You need ${COST_PER_IMAGE} coins.` }, { status: 403 });
         }
@@ -55,7 +64,7 @@ export async function POST(req: Request) {
         const client = await auth.getClient();
         const projectId = await auth.getProjectId();
         const location = 'us-central1';
-        const selectedModel = 'imagen-3-generate-001'; // ปรับเป็น Imagen 3 รุ่นล่าสุด
+        const selectedModel = 'imagen-3.0-generate-001'; // ปรับเป็น Imagen 3 รุ่นล่าสุด
 
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:predict`;
 

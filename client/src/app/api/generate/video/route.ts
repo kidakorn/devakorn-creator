@@ -34,12 +34,20 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 รับพารามิเตอร์ที่ยืดหยุ่นมากขึ้นจากหน้าเว็บ
-		const { prompt, category, aspectRatio, cameraAngle, style, lighting } = await req.json();
+		// 🟢 Receive FormData to support image uploads
+		const formData = await req.formData();
+		const prompt = formData.get('prompt') as string;
+		const category = formData.get('category') as string;
+		const aspectRatio = formData.get('aspectRatio') as string;
+		const duration = formData.get('duration') as string; // 🟢 Get duration from frontend
+		const cameraAngle = formData.get('cameraAngle') as string;
+		const style = formData.get('style') as string;
+		const lighting = formData.get('lighting') as string;
+		const imageFile = formData.get('image') as File | null;
 		
 		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
 
-		// ราคาปรับลดลงมาแล้วตามที่คุณแก้ไว้
+		// Price is adjusted according to the logic
 		const COST_PER_VIDEO = 499;
 
 		if (user.coinBalance < COST_PER_VIDEO) {
@@ -49,14 +57,24 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 🟢 สร้าง Prompt แบบ Dynamic (ถ้าผู้ใช้ไม่ได้เลือกมา ก็จะไม่ใส่เข้าไปให้รก)
+		// 🟢 Process Image if uploaded (Convert to Base64 for Veo AI)
+		let inputImageBase64 = undefined;
+		let inputImageMimeType = undefined;
+		if (imageFile) {
+			const arrayBuffer = await imageFile.arrayBuffer();
+			inputImageBase64 = Buffer.from(arrayBuffer).toString('base64');
+			inputImageMimeType = imageFile.type;
+		}
+
+		// 🟢 Dynamic Prompt construction
 		let finalPrompt = prompt;
 		if (category && category !== "None") finalPrompt += `, Category: ${category}`;
 		if (style && style !== "None") finalPrompt += `, Style: ${style}`;
 		if (cameraAngle && cameraAngle !== "None") finalPrompt += `, Camera: ${cameraAngle}`;
 		if (lighting && lighting !== "None") finalPrompt += `, Lighting: ${lighting}`;
+		if (duration) finalPrompt += `. Ensure the video duration is exactly ${duration} seconds long.`;
 
-		// โหลดสิทธิ์จากไฟล์ json ของ Google Cloud
+		// Load credentials
 		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
 		process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 
@@ -64,11 +82,23 @@ export async function POST(req: Request) {
 		const storage = new Storage({ keyFilename: keyPath });
 
 		console.log(`[1/3] Submitting video job to Veo AI (Price: ${COST_PER_VIDEO} Coins)...`);
-		let operation = await client.models.generateVideos({
+		
+		const videoOptions: any = {
 			model: 'veo-3.1-generate-001',
-			prompt: finalPrompt, // ส่ง Prompt ที่ผู้ใช้มีอิสระในการปรุงแต่งเอง
+			prompt: finalPrompt,
 			config: { aspectRatio: aspectRatio || "16:9" }
-		});
+		};
+
+		// Pass the image reference to Veo if provided
+		if (inputImageBase64) {
+			videoOptions.inputImage = {
+				mimeType: inputImageMimeType,
+				bytesBase64Encoded: inputImageBase64,
+				bytes: inputImageBase64 // Added for SDK compatibility
+			};
+		}
+
+		let operation = await client.models.generateVideos(videoOptions);
 
 		console.log(`[2/3] Got Ticket: ${operation.name}`);
 		console.log("Waiting for AI to render (approx 1-3 mins)...");
