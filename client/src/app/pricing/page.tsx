@@ -6,8 +6,9 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from "@/components/DashboardLayout";
-import { Zap, Coins, History, CreditCard, X, CheckCircle2, Sparkles, Star } from "lucide-react";
+import { Zap, Coins, History, CreditCard, X, CheckCircle2, Sparkles, Star, UploadCloud, QrCode } from "lucide-react";
 import useSWR from 'swr';
+import { QRCodeSVG } from 'qrcode.react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -34,6 +35,14 @@ export default function WalletDashboardPage() {
 	const [transactions, setTransactions] = useState<any[]>([]);
 	const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+	// QR & Slip States
+	const [showQR, setShowQR] = useState(false);
+	const [qrPayload, setQrPayload] = useState("");
+	const [promptpayName, setPromptpayName] = useState("");
+	const [slipFile, setSlipFile] = useState<File | null>(null);
+	const [slipPreview, setSlipPreview] = useState<string | null>(null);
+	const [isVerifying, setIsVerifying] = useState(false);
+
 	const { data } = useSWR('/api/user/balance', fetcher, { refreshInterval: 10000, revalidateOnFocus: true });
 	const currentCoins = data?.coinBalance ?? 0;
 
@@ -59,17 +68,63 @@ export default function WalletDashboardPage() {
 		if (!isValidAmount) return;
 		try {
 			setIsCheckingOut(true);
-			const response = await fetch('/api/stripe/checkout', {
+			const response = await fetch('/api/payment/qr', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ amount }),
 			});
 			const data = await response.json();
-			if (data.url) window.location.href = data.url;
-			else { alert("Error: " + data.error); setIsCheckingOut(false); }
+			
+			if (data.payload) {
+				setQrPayload(data.payload);
+				setPromptpayName(data.promptpayName);
+				setShowQR(true);
+				setSlipFile(null);
+				setSlipPreview(null);
+			} else {
+				alert("Error: " + data.error);
+			}
 		} catch (error) {
-			console.error("Checkout Error:", error);
+			console.error("QR Error:", error);
+			alert("Failed to generate QR Code");
+		} finally {
 			setIsCheckingOut(false);
+		}
+	};
+
+	const handleSlipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			setSlipFile(file);
+			setSlipPreview(URL.createObjectURL(file));
+		}
+	};
+
+	const handleVerifySlip = async () => {
+		if (!slipFile) return;
+		setIsVerifying(true);
+		try {
+			const formData = new FormData();
+			formData.append('file', slipFile);
+			formData.append('amount', String(amount));
+
+			const res = await fetch('/api/payment/verify', {
+				method: 'POST',
+				body: formData,
+			});
+			const data = await res.json();
+			
+			if (data.success) {
+				alert(`Successfully added ${data.coinsAdded} coins!`);
+				setShowQR(false);
+			} else {
+				alert("Verification failed: " + data.error + (data.details ? `\nDetails: ${data.details}` : ''));
+			}
+		} catch (error) {
+			console.error("Verify Error:", error);
+			alert("An error occurred during verification");
+		} finally {
+			setIsVerifying(false);
 		}
 	};
 
@@ -218,7 +273,7 @@ export default function WalletDashboardPage() {
 						{isCheckingOut ? (
 							<div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
 						) : (
-							<><CreditCard className="w-5 h-5" /> Pay ฿{amount || 0} &rarr; Get {coinsResult.total.toLocaleString()} Coins</>
+							<><QrCode className="w-5 h-5" /> Generate QR for ฿{amount || 0}</>
 						)}
 					</button>
 				</div>
@@ -270,6 +325,70 @@ export default function WalletDashboardPage() {
 									<p className="text-gray-400 text-sm font-medium">Your history will appear here.</p>
 								</div>
 							)}
+						</div>
+					</div>
+				</div>
+			)}
+			{/* QR Code & Slip Modal */}
+			{showQR && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+					<div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+						<div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+							<h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+								<QrCode className="w-4 h-4 text-red-500" /> PromptPay QR
+							</h3>
+							<button onClick={() => setShowQR(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all">
+								<X className="w-4 h-4" />
+							</button>
+						</div>
+						
+						<div className="p-6 flex flex-col items-center">
+							<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
+								<QRCodeSVG value={qrPayload} size={200} />
+							</div>
+							
+							<div className="text-center mb-6">
+								<p className="text-2xl font-black text-gray-900">฿{amount}</p>
+								<p className="text-sm font-medium text-gray-500 mt-1">{promptpayName}</p>
+							</div>
+
+							<div className="w-full space-y-3">
+								<p className="text-sm font-bold text-gray-700">Upload Slip to Verify</p>
+								
+								{!slipPreview ? (
+									<label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-red-50 hover:border-red-200 transition-all cursor-pointer">
+										<UploadCloud className="w-8 h-8 text-gray-400 mb-2" />
+										<p className="text-xs font-medium text-gray-500">Click to upload slip</p>
+										<input type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+									</label>
+								) : (
+									<div className="relative w-full h-40 rounded-xl overflow-hidden border border-gray-200">
+										<img src={slipPreview} alt="Slip" className="w-full h-full object-cover" />
+										<button 
+											onClick={() => { setSlipFile(null); setSlipPreview(null); }}
+											className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-all"
+										>
+											<X className="w-3 h-3" />
+										</button>
+									</div>
+								)}
+
+								<button
+									onClick={handleVerifySlip}
+									disabled={!slipFile || isVerifying}
+									className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex justify-center items-center gap-2
+										${slipFile && !isVerifying
+											? "bg-red-600 text-white hover:bg-red-700 shadow-md"
+											: "bg-gray-100 text-gray-400 cursor-not-allowed"
+										}`}
+								>
+									{isVerifying ? (
+										<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Verifying...</>
+									) : (
+										"Verify Payment"
+									)}
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
