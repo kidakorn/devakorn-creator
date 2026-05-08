@@ -10,20 +10,22 @@ import {
 	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck,
 	User, Eye, Megaphone, X
 } from "lucide-react";
+import { useLanguage } from "@/lib/useLanguage";
 
 export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; toggleSidebar: () => void }) {
 	const pathname = usePathname();
 	const { data: session } = useSession();
+	const { t } = useLanguage();
 
 	const navItems = [
-		{ name: "Overview", href: "/", icon: LayoutDashboard },
-		{ name: "Prompt Magic", href: "/prompt-enhancer", icon: Wand2 },
-		{ name: "Image Studio", href: "/image-studio", icon: Sparkles },
-		{ name: "Video Creator", href: "/video-creator", icon: VideoIcon },
-		{ name: "Campaign Builder", href: "/campaign-builder", icon: Megaphone },
-		{ name: "Gallery", href: "/gallery", icon: ImageIcon },
-		{ name: "Wallet & Coins", href: "/pricing", icon: Wallet },
-		{ name: "My Profile", href: "/profile", icon: User },
+		{ nameKey: 'nav_overview' as const, href: "/", icon: LayoutDashboard },
+		{ nameKey: 'nav_prompt_magic' as const, href: "/prompt-enhancer", icon: Wand2 },
+		{ nameKey: 'nav_image_studio' as const, href: "/image-studio", icon: Sparkles },
+		{ nameKey: 'nav_video_creator' as const, href: "/video-creator", icon: VideoIcon },
+		{ nameKey: 'nav_campaign_builder' as const, href: "/campaign-builder", icon: Megaphone },
+		{ nameKey: 'nav_gallery' as const, href: "/gallery", icon: ImageIcon },
+		{ nameKey: 'nav_wallet' as const, href: "/pricing", icon: Wallet },
+		{ nameKey: 'nav_profile' as const, href: "/profile", icon: User },
 	];
 
 	const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -84,9 +86,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 						const Icon = item.icon;
 						return (
 							<Link
-								key={item.name}
+								key={item.nameKey}
 								href={item.href}
-								title={!isOpen ? item.name : undefined}
+								title={!isOpen ? t(item.nameKey) : undefined}
 								onClick={() => {
 									if (window.innerWidth < 768 && isOpen) toggleSidebar();
 								}}
@@ -97,7 +99,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 									}`}
 							>
 								<Icon className="w-5 h-5 shrink-0" />
-								{isOpen && <span className="whitespace-nowrap">{item.name}</span>}
+								{isOpen && <span className="whitespace-nowrap">{t(item.nameKey)}</span>}
 							</Link>
 						);
 					})}

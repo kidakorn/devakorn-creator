@@ -7,11 +7,13 @@ import { useSession, signOut } from "next-auth/react";
 import { Menu, LogOut, Coins, Plus } from "lucide-react";
 import Link from "next/link";
 import useSWR from 'swr';
+import { useLanguage } from "@/lib/useLanguage";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 	const { data: session } = useSession();
+	const { language, toggleLanguage } = useLanguage();
 
 	const { data } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
@@ -38,6 +40,15 @@ export default function Header({ toggleSidebar }: { toggleSidebar: () => void })
 			<div className="flex items-center gap-3 sm:gap-4">
 				{session?.user ? (
 					<>
+						{/* Language Toggle Button */}
+						<button
+							onClick={toggleLanguage}
+							title="Switch Language / เปลี่ยนภาษา"
+							className="flex items-center px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs font-black text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-all active:scale-95 select-none tracking-wider"
+						>
+							{language === 'th' ? 'TH' : 'EN'}
+						</button>
+
 						<Link
 							href="/pricing"
 							className="group flex items-center gap-2 px-1.5 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-full transition-all active:scale-95 shadow-sm cursor-pointer"
@@ -57,12 +68,11 @@ export default function Header({ toggleSidebar }: { toggleSidebar: () => void })
 							<p className="text-xs text-gray-500 font-medium">{session.user.email}</p>
 						</div>
 
-						{/* 🟢 ทำให้รูปโปรไฟล์กดลิงก์ไปหน้า /profile ได้ */}
 						<Link href="/profile" className="block hover:ring-2 hover:ring-red-500 rounded-full transition-all">
 							<img
 								src={headerProfileImage}
 								alt="Profile"
-								referrerPolicy="no-referrer" /* 🟢 ห้ามลืมบรรทัดนี้เด็ดขาด */
+								referrerPolicy="no-referrer"
 								className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-200 object-cover"
 							/>
 						</Link>

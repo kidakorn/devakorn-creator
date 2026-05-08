@@ -17,6 +17,7 @@ import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardLayout from "@/components/DashboardLayout";
 import LandingPage from "@/components/LandingPage";
+import { useLanguage } from "@/lib/useLanguage";
 
 interface Asset {
   id: string; type: string; prompt: string; createdAt: string; category: string;
@@ -36,6 +37,7 @@ export default function Home() {
   const [likingId, setLikingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const { t } = useLanguage();
 
   const handleDailyCheckIn = async () => {
     setIsCheckingIn(true);
@@ -142,9 +144,9 @@ export default function Home() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview Dashboard</h1>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">{t('overview_title')}</h1>
             <p className="text-gray-500 text-sm mt-1 font-medium">
-              Welcome back, <span className="text-gray-800 font-bold">{session?.user?.name?.split(' ')[0] || 'Creator'}</span>. Let's build something amazing today.
+              {t('overview_welcome')} <span className="text-gray-800 font-bold">{session?.user?.name?.split(' ')[0] || 'Creator'}</span>. {t('overview_subtitle')}
             </p>
           </div>
           <button
@@ -153,17 +155,17 @@ export default function Home() {
             className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-xl flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isCheckingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-            Daily Reward
+            {t('overview_daily_reward')}
           </button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: Activity, label: 'Total Assets', value: totalCount, sub: 'all time', color: 'bg-red-50 text-red-600', badge: 'Live', badgeColor: 'bg-emerald-100 text-emerald-700' },
-            { icon: ImageIcon, label: 'Images', value: imageCount, sub: 'generated', color: 'bg-blue-50 text-blue-600', badge: null, badgeColor: '' },
-            { icon: VideoIcon, label: 'Videos', value: videoCount, sub: 'generated', color: 'bg-gray-100 text-gray-600', badge: null, badgeColor: '' },
-            { icon: Zap, label: 'Balance', value: currentCoins.toLocaleString(), sub: 'coins available', color: 'bg-yellow-50 text-yellow-600', badge: null, badgeColor: '', link: '/pricing' },
+            { icon: Activity, label: t('overview_total_assets'), value: totalCount, sub: t('overview_all_time'), color: 'bg-red-50 text-red-600', badge: 'Live', badgeColor: 'bg-emerald-100 text-emerald-700' },
+            { icon: ImageIcon, label: t('overview_images'), value: imageCount, sub: t('overview_generated'), color: 'bg-blue-50 text-blue-600', badge: null, badgeColor: '' },
+            { icon: VideoIcon, label: t('overview_videos'), value: videoCount, sub: t('overview_generated'), color: 'bg-gray-100 text-gray-600', badge: null, badgeColor: '' },
+            { icon: Zap, label: t('overview_balance'), value: currentCoins.toLocaleString(), sub: t('overview_coins_available'), color: 'bg-yellow-50 text-yellow-600', badge: null, badgeColor: '', link: '/pricing' },
           ].map(({ icon: Icon, label, value, sub, color, badge, badgeColor, link }) => (
             <div key={label} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group">
               <div className="flex items-start justify-between mb-4">
@@ -188,9 +190,9 @@ export default function Home() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-red-500" /> Usage Analytics
+                  <TrendingUp className="w-4 h-4 text-red-500" /> {t('overview_analytics')}
                 </h2>
-                <p className="text-xs text-gray-400 font-medium mt-1">Generations per day of the week</p>
+                <p className="text-xs text-gray-400 font-medium mt-1">{t('overview_analytics_sub')}</p>
               </div>
               <div className="flex items-center gap-3 text-xs font-bold">
                 <span className="flex items-center gap-1.5 text-gray-500"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Images</span>
@@ -217,7 +219,7 @@ export default function Home() {
 
           {/* Quick Start */}
           <div className="space-y-3">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Quick Start</h2>
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('overview_quick_start')}</h2>
             {[
               { href: '/image-studio', icon: PackageOpen, title: 'Image Studio', sub: 'Product photography & design', iconBg: 'bg-red-600', border: 'hover:border-red-400', text: 'group-hover:text-red-600' },
               { href: '/video-creator', icon: VideoIcon, title: 'Video Creator', sub: 'Commercial ads up to 30s', iconBg: 'bg-gray-900', border: 'hover:border-gray-700', text: 'group-hover:text-gray-900' },
@@ -243,9 +245,9 @@ export default function Home() {
           <div className="p-5 border-b border-gray-100 flex justify-between items-center">
             <div>
               <h2 className="text-base font-black text-gray-900 tracking-tight flex items-center gap-2">
-                <Heart className="w-4 h-4 text-red-500 fill-current" /> Community Trending
+                <Heart className="w-4 h-4 text-red-500 fill-current" /> {t('overview_community')}
               </h2>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">Explore and support fellow creators</p>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">{t('overview_community_sub')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -302,7 +304,7 @@ export default function Home() {
             ) : (
               <div className="text-center py-16">
                 <Heart className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-                <p className="text-sm font-bold text-gray-400">No community trends on this page.</p>
+                <p className="text-sm font-bold text-gray-400">{ t('overview_no_community')}</p>
               </div>
             )}
           </div>
@@ -313,11 +315,11 @@ export default function Home() {
           <div className="p-5 border-b border-gray-100 flex justify-between items-center">
             <div>
               <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
-                <History className="w-4 h-4 text-gray-400" /> Recent Activity
+                <History className="w-4 h-4 text-gray-400" /> {t('overview_recent')}
               </h2>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">Your latest 5 generations</p>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">{t('overview_recent_sub')}</p>
             </div>
-            <Link href="/gallery" className="text-xs font-bold text-red-600 hover:underline flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></Link>
+            <Link href="/gallery" className="text-xs font-bold text-red-600 hover:underline flex items-center gap-1">{t('overview_view_all')} <ChevronRight className="w-3 h-3" /></Link>
           </div>
           <div className="divide-y divide-gray-50">
             {recentAssets.length > 0 ? recentAssets.map((asset) => (
@@ -332,7 +334,7 @@ export default function Home() {
             )) : (
               <div className="py-12 text-center text-gray-400">
                 <Activity className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                <p className="text-sm font-medium">No recent activity found.</p>
+                <p className="text-sm font-medium">{t('overview_no_activity')}</p>
               </div>
             )}
           </div>

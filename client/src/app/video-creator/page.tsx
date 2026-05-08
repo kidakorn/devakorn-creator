@@ -25,6 +25,8 @@ import {
 	User
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useLanguage } from "@/lib/useLanguage";
+import type { TranslationKey } from "@/lib/translations";
 
 const categories = [
 	'Product Showcase',
@@ -43,8 +45,31 @@ const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Ca
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+const VCAT_KEYS: Record<string, TranslationKey> = {
+  'Product Showcase': 'vcat_product', 'TikTok / Reels Ad': 'vcat_tiktok',
+  'Cinematic Promo': 'vcat_cinematic', 'Stop Motion': 'vcat_stop_motion',
+  '3D Product Reveal': 'vcat_3d_reveal', 'B-Roll Footage': 'vcat_broll',
+};
+const STYLE_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
+  'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
+};
+const CAM_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
+  'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
+};
+const LIGHT_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
+  'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
+};
+const PRES_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
+  'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
+};
+
 export default function VideoCreatorPage() {
 	const { data: session } = useSession();
+	const { t } = useLanguage();
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
@@ -232,10 +257,10 @@ export default function VideoCreatorPage() {
 						<div className="mb-8">
 							<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
 								<Clapperboard className="w-8 h-8 text-red-600" />
-								Video Ad Creator
+								{t('video_title')}
 							</h1>
 							<p className="text-gray-500 mt-2 text-sm font-medium">
-								Generate high-converting commercial video assets for your products.
+								{t('video_sub')}
 							</p>
 						</div>
 
@@ -285,7 +310,7 @@ export default function VideoCreatorPage() {
 
 								<div>
 									<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
-										<Video className="w-4 h-4 text-red-600" /> Ad Style Category
+										<Video className="w-4 h-4 text-red-600" /> {t('image_category')}
 									</label>
 									<div className="flex flex-wrap gap-2">
 										{categories.map((cat) => (
@@ -294,7 +319,7 @@ export default function VideoCreatorPage() {
 												onClick={() => setSelectedCategory(cat)}
 												className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${selectedCategory === cat ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-red-300 hover:bg-red-50'}`}
 											>
-												{cat}
+												{VCAT_KEYS[cat] ? t(VCAT_KEYS[cat]) : cat}
 											</button>
 										))}
 									</div>
@@ -304,50 +329,50 @@ export default function VideoCreatorPage() {
 								<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
 									<div>
 										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
-											<User className="w-3.5 h-3.5 text-red-600" /> Presenter
+											<User className="w-3.5 h-3.5 text-red-600" /> {t('image_presenter')}
 										</label>
 										<select
 											value={presenter}
 											onChange={(e) => setPresenter(e.target.value)}
 											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
 										>
-											{presenterOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+											{presenterOptions.map(opt => <option key={opt} value={opt}>{PRES_KEYS[opt] ? t(PRES_KEYS[opt]) : opt}</option>)}
 										</select>
 									</div>
 									<div>
 										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
-											<Palette className="w-3.5 h-3.5" /> Style
+											<Palette className="w-3.5 h-3.5" /> {t('image_style')}
 										</label>
 										<select
 											value={style}
 											onChange={(e) => setStyle(e.target.value)}
 											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
 										>
-											{styleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+											{styleOptions.map(opt => <option key={opt} value={opt}>{STYLE_KEYS[opt] ? t(STYLE_KEYS[opt]) : opt}</option>)}
 										</select>
 									</div>
 									<div>
 										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
-											<Camera className="w-3.5 h-3.5" /> Camera Angle
+											<Camera className="w-3.5 h-3.5" /> {t('image_camera')}
 										</label>
 										<select
 											value={cameraAngle}
 											onChange={(e) => setCameraAngle(e.target.value)}
 											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
 										>
-											{cameraOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+											{cameraOptions.map(opt => <option key={opt} value={opt}>{CAM_KEYS[opt] ? t(CAM_KEYS[opt]) : opt}</option>)}
 										</select>
 									</div>
 									<div>
 										<label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2">
-											<Sun className="w-3.5 h-3.5" /> Lighting
+											<Sun className="w-3.5 h-3.5" /> {t('image_lighting')}
 										</label>
 										<select
 											value={lighting}
 											onChange={(e) => setLighting(e.target.value)}
 											className="w-full border border-gray-200 bg-white rounded-lg p-2.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-red-500 outline-none cursor-pointer"
 										>
-											{lightingOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+											{lightingOptions.map(opt => <option key={opt} value={opt}>{LIGHT_KEYS[opt] ? t(LIGHT_KEYS[opt]) : opt}</option>)}
 										</select>
 									</div>
 								</div>
@@ -356,7 +381,7 @@ export default function VideoCreatorPage() {
 									<div className="flex items-center justify-between mb-2">
 										<label className="text-sm font-bold text-gray-700 flex items-center gap-2">
 											<Clapperboard className="w-4 h-4 text-red-600" />
-											Product & Scene Description
+											{t('video_prompt_label')}
 										</label>
 										<button 
 											onClick={handleAutoPrompt}
@@ -364,7 +389,7 @@ export default function VideoCreatorPage() {
 											className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
 										>
 											{isEnhancingPrompt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-											Let AI Think
+											{t('image_let_ai_think')}
 										</button>
 									</div>
 									<textarea
@@ -419,7 +444,7 @@ export default function VideoCreatorPage() {
 								<div>
 									{isBanned && (
 										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
-											<ShieldAlert className="w-4 h-4" /> Account Suspended
+											<ShieldAlert className="w-4 h-4" /> {t('general_suspended')}
 										</div>
 									)}
 
@@ -432,19 +457,13 @@ export default function VideoCreatorPage() {
 											}`}
 									>
 										{isGenerating ? (
-											<>
-												<RefreshCw className="w-5 h-5 animate-spin" />
-												Rendering Video...
-											</>
+											<><RefreshCw className="w-5 h-5 animate-spin" />{t('image_generating')}</>
 										) : isBanned ? (
-											'Suspended'
+											t('general_suspended')
 										) : currentCoins < currentCost ? (
-											`Insufficient Coins (${currentCost} Coins)`
+											t('general_not_enough_coins')
 										) : (
-											<>
-												<Play className="w-5 h-5 fill-current" />
-												Generate Video Ad (-{currentCost} Coins)
-											</>
+											<><Play className="w-5 h-5 fill-current" />{t('video_generate_btn')} (-{currentCost} Coins)</>
 										)}
 									</button>
 								</div>
@@ -492,7 +511,7 @@ export default function VideoCreatorPage() {
 											className="flex-1 bg-gray-50 text-gray-700 border border-gray-200 py-4 rounded-xl font-bold hover:bg-gray-100 transition-all flex justify-center items-center gap-2"
 										>
 											{isDownloading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-											Download
+											{t('video_download')}
 										</button>
 										<button
 											onClick={handleShare}

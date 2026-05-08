@@ -9,6 +9,8 @@ import {
 	Camera, Palette, Sun, Layers, User // Added icons
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useLanguage } from "@/lib/useLanguage";
+import type { TranslationKey } from "@/lib/translations";
 
 const CATEGORIES = [
 	"None", "Product Photography", "T-Shirt Design", "Sticker & Die-cut",
@@ -23,9 +25,32 @@ const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Ca
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+const CAT_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Product Photography': 'cat_product_photo', 'T-Shirt Design': 'cat_tshirt',
+  'Sticker & Die-cut': 'cat_sticker', 'Packaging Design': 'cat_packaging', 'Seamless Pattern': 'cat_pattern',
+  'Logo Concept': 'cat_logo', '3D Icon': 'cat_3d',
+};
+const STYLE_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
+  'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
+};
+const CAM_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
+  'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
+};
+const LIGHT_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
+  'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
+};
+const PRES_KEYS: Record<string, TranslationKey> = {
+  'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
+  'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
+};
+
 export default function ImageStudio() {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { data: session } = useSession();
+	const { t } = useLanguage();
 	const [prompt, setPrompt] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [isGenerating, setIsLoading] = useState(false);
@@ -201,10 +226,10 @@ export default function ImageStudio() {
 						<div>
 							<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
 								<PackageOpen className="w-6 h-6 text-primary-red" />
-								Product Image Studio
+								{t('image_title')}
 							</h1>
 							<div>
-								<p className="text-sm font-medium text-text-main/50 mt-1">Generate highly-converting commercial product assets.</p>
+								<p className="text-sm font-medium text-text-main/50 mt-1">{t('image_sub')}</p>
 							</div>
 						</div>
 
@@ -212,7 +237,7 @@ export default function ImageStudio() {
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Zap className="w-4 h-4 text-primary-red" /> Render Quality
+									<Zap className="w-4 h-4 text-primary-red" /> {t('image_quality')}
 								</label>
 								<div className="flex gap-4">
 									<button
@@ -240,7 +265,7 @@ export default function ImageStudio() {
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Layers className="w-4 h-4 text-primary-red" /> Generation Mode
+									<Layers className="w-4 h-4 text-primary-red" /> {t('image_generation_mode')}
 								</label>
 								<div className="flex gap-4">
 									<button
@@ -260,7 +285,7 @@ export default function ImageStudio() {
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Tags className="w-4 h-4 text-primary-red" /> Product Asset Type
+									<Tags className="w-4 h-4 text-primary-red" /> {t('image_category')}
 								</label>
 								<div className="flex flex-wrap gap-2">
 									{CATEGORIES.map((cat) => (
@@ -272,7 +297,7 @@ export default function ImageStudio() {
 												: 'bg-light-gray/50 text-text-main/60 border-gray-200 hover:border-primary-red/50 hover:text-dark-bg'
 												}`}
 										>
-											{cat}
+											{CAT_KEYS[cat] ? t(CAT_KEYS[cat]) : cat}
 										</button>
 									))}
 								</div>
@@ -282,50 +307,50 @@ export default function ImageStudio() {
 							<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<User className="w-3.5 h-3.5 text-primary-red" /> Presenter
+										<User className="w-3.5 h-3.5 text-primary-red" /> {t('image_presenter')}
 									</label>
 									<select
 										value={presenter}
 										onChange={(e) => setPresenter(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{presenterOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{presenterOptions.map(opt => <option key={opt} value={opt}>{PRES_KEYS[opt] ? t(PRES_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<Palette className="w-3.5 h-3.5 text-primary-red" /> Style
+										<Palette className="w-3.5 h-3.5 text-primary-red" /> {t('image_style')}
 									</label>
 									<select
 										value={style}
 										onChange={(e) => setStyle(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{styleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{styleOptions.map(opt => <option key={opt} value={opt}>{STYLE_KEYS[opt] ? t(STYLE_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<Camera className="w-3.5 h-3.5 text-primary-red" /> Angle
+										<Camera className="w-3.5 h-3.5 text-primary-red" /> {t('image_camera')}
 									</label>
 									<select
 										value={cameraAngle}
 										onChange={(e) => setCameraAngle(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{cameraOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{cameraOptions.map(opt => <option key={opt} value={opt}>{CAM_KEYS[opt] ? t(CAM_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<Sun className="w-3.5 h-3.5 text-primary-red" /> Lighting
+										<Sun className="w-3.5 h-3.5 text-primary-red" /> {t('image_lighting')}
 									</label>
 									<select
 										value={lighting}
 										onChange={(e) => setLighting(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{lightingOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{lightingOptions.map(opt => <option key={opt} value={opt}>{LIGHT_KEYS[opt] ? t(LIGHT_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 							</div>
@@ -342,7 +367,7 @@ export default function ImageStudio() {
 										className="text-xs font-bold text-primary-red bg-primary-red/10 hover:bg-primary-red/20 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
 									>
 										{isEnhancingPrompt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-										Let AI Think
+										{t('image_let_ai_think')}
 									</button>
 								</div>
 								<textarea
@@ -388,7 +413,7 @@ export default function ImageStudio() {
 							</div>
 
 							<div className="space-y-3">
-								<label className="text-sm font-bold text-dark-bg">Aspect Ratio</label>
+								<label className="text-sm font-bold text-dark-bg">{t('image_aspect_ratio')}</label>
 								<div className="grid grid-cols-3 gap-3">
 									{["1:1", "16:9", "9:16"].map((ratio) => (
 										<button
@@ -405,7 +430,7 @@ export default function ImageStudio() {
 							<div>
 								{isBanned && (
 									<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
-										<ShieldAlert className="w-4 h-4" /> Account Suspended
+										<ShieldAlert className="w-4 h-4" /> {t('general_suspended')}
 									</div>
 								)}
 
@@ -418,19 +443,13 @@ export default function ImageStudio() {
 										}`}
 								>
 									{isGenerating ? (
-										<>
-											<RefreshCw className="w-4 h-4 animate-spin" />
-											Designing Product...
-										</>
+										<><RefreshCw className="w-4 h-4 animate-spin" />{t('image_generating')}</>
 									) : isBanned ? (
-										'Suspended'
+										t('general_suspended')
 									) : currentCoins < currentCost ? (
-										`Insufficient Coins (${currentCost} Coins)`
+										t('general_not_enough_coins')
 									) : (
-										<>
-											<Sparkles className="w-4 h-4" />
-											Generate Image (-{currentCost} Coins)
-										</>
+										<><Sparkles className="w-4 h-4" />{t('image_generate_btn')} (-{currentCost} Coins)</>
 									)}
 								</button>
 							</div>
@@ -460,7 +479,7 @@ export default function ImageStudio() {
 										onClick={handleDownload}
 										className="bg-dark-bg/90 backdrop-blur-md text-white hover:bg-primary-red px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg transition-all hover:scale-105"
 									>
-										<Download className="w-4 h-4" /> Download Asset
+										<Download className="w-4 h-4" /> {t('image_download')}
 									</button>
 								</div>
 							</div>

@@ -14,6 +14,8 @@ import {
 	Heart, Bookmark, Music, Play
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useLanguage } from "@/lib/useLanguage";
+import type { TranslationKey } from "@/lib/translations";
 
 const PLATFORMS = ["Facebook", "Instagram", "TikTok", "YouTube"];
 const TONES = ["Engaging & Professional", "Fun & Casual", "Hard Sell (Urgent)", "Storytelling"];
@@ -22,8 +24,22 @@ const OBJECTIVES = ["Direct Conversion / Sales", "Engagement & Viral", "Brand Aw
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+const CAMP_TONE_KEYS: Record<string, TranslationKey> = {
+  'Engaging & Professional': 'camp_tone_engaging',
+  'Fun & Casual': 'camp_tone_fun',
+  'Hard Sell (Urgent)': 'camp_tone_hard_sell',
+  'Storytelling': 'camp_tone_story',
+};
+const OBJ_KEYS: Record<string, TranslationKey> = {
+  'Direct Conversion / Sales': 'obj_conversion',
+  'Engagement & Viral': 'obj_engagement',
+  'Brand Awareness': 'obj_awareness',
+  'Lead Generation': 'obj_leads',
+};
+
 export default function CampaignBuilderPage() {
 	const { data: session } = useSession();
+	const { t } = useLanguage();
 
 	const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -129,22 +145,22 @@ export default function CampaignBuilderPage() {
 					<div>
 						<h1 className="text-2xl font-black text-dark-bg tracking-tight flex items-center gap-2">
 							<Megaphone className="w-6 h-6 text-primary-red" />
-							Campaign Builder
+							{t('campaign_title')}
 						</h1>
-						<p className="text-text-main/60 text-sm mt-1 font-medium">Turn your images into high-converting social media posts in 1-click.</p>
+						<p className="text-text-main/60 text-sm mt-1 font-medium">{t('campaign_sub')}</p>
 					</div>
 					<div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
 						<button
 							onClick={() => setActiveTab('create')}
 							className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-white text-dark-bg shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
 						>
-							<span className="flex items-center gap-2"><Wand2 className="w-4 h-4" /> Create</span>
+							<span className="flex items-center gap-2"><Wand2 className="w-4 h-4" /> {t('campaign_create')}</span>
 						</button>
 						<button
 							onClick={() => setActiveTab('history')}
 							className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white text-dark-bg shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
 						>
-							<span className="flex items-center gap-2"><History className="w-4 h-4" /> My Campaigns</span>
+							<span className="flex items-center gap-2"><History className="w-4 h-4" /> {t('campaign_my_campaigns')}</span>
 						</button>
 					</div>
 				</div>
@@ -157,15 +173,15 @@ export default function CampaignBuilderPage() {
 						{/* Left Side: Input Form (50%) */}
 						<section className="w-full bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
 							<div className="p-5 border-b border-gray-100 bg-gray-50">
-								<h2 className="text-base font-bold text-dark-bg">Campaign Settings</h2>
-								<p className="text-xs text-text-main/50 font-medium">Select an image and configure your post.</p>
+								<h2 className="text-base font-bold text-dark-bg">{t('campaign_settings')}</h2>
+								<p className="text-xs text-text-main/50 font-medium">{t('campaign_sub')}</p>
 							</div>
 
 							<div className="p-5 flex flex-col gap-5 flex-1">
 								{/* Image Selector */}
 								<div className="space-y-2">
 									<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-										<ImageIcon className="w-4 h-4 text-primary-red" /> Selected Image
+										<ImageIcon className="w-4 h-4 text-primary-red" /> {t('campaign_select_image')}
 									</label>
 									
 									<div className="relative w-full aspect-video bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden group">
@@ -181,7 +197,7 @@ export default function CampaignBuilderPage() {
 										) : (
 											<button onClick={() => setIsModalOpen(true)} className="flex flex-col items-center justify-center gap-2 w-full h-full text-gray-400 hover:text-primary-red hover:bg-gray-100 transition-all">
 												<LayoutGrid className="w-8 h-8 opacity-50" />
-												<span className="font-bold text-sm">Select Image from Gallery</span>
+												<span className="font-bold text-sm">{t('campaign_select_image')}</span>
 											</button>
 										)}
 									</div>
@@ -189,27 +205,27 @@ export default function CampaignBuilderPage() {
 
 								<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 									<div className="space-y-1.5">
-										<label className="text-sm font-bold text-dark-bg">Platform</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_platform')}</label>
 										<select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-gray-50 outline-none focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red transition-all" value={platform} onChange={(e) => setPlatform(e.target.value)}>
 											{PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
 										</select>
 									</div>
 									<div className="space-y-1.5">
-										<label className="text-sm font-bold text-dark-bg">Language</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_language')}</label>
 										<select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-gray-50 outline-none focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red transition-all" value={language} onChange={(e) => setLanguage(e.target.value)}>
 											{LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
 										</select>
 									</div>
 									<div className="space-y-1.5 lg:col-span-2">
-										<label className="text-sm font-bold text-dark-bg">Tone of Voice</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_tone')}</label>
 										<select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-gray-50 outline-none focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red transition-all" value={tone} onChange={(e) => setTone(e.target.value)}>
-											{TONES.map(t => <option key={t} value={t}>{t}</option>)}
+											{TONES.map(toneVal => <option key={toneVal} value={toneVal}>{CAMP_TONE_KEYS[toneVal] ? t(CAMP_TONE_KEYS[toneVal]) : toneVal}</option>)}
 										</select>
 									</div>
 
 									{/* Agency Fields */}
 									<div className="space-y-1.5 lg:col-span-2">
-										<label className="text-sm font-bold text-dark-bg">Product Name (Optional)</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_product_name')}</label>
 										<input 
 											type="text" 
 											placeholder="e.g. BAEAY Superfood" 
@@ -219,7 +235,7 @@ export default function CampaignBuilderPage() {
 										/>
 									</div>
 									<div className="space-y-1.5 lg:col-span-2">
-										<label className="text-sm font-bold text-dark-bg">Additional Details (Optional)</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_additional')}</label>
 										<input 
 											type="text" 
 											placeholder="e.g. Helps with digestion, rich in Vitamin C" 
@@ -229,13 +245,13 @@ export default function CampaignBuilderPage() {
 										/>
 									</div>
 									<div className="space-y-1.5 lg:col-span-2 pt-2 border-t border-gray-100 mt-2">
-										<label className="text-sm font-bold text-dark-bg">Campaign Objective</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_objective')}</label>
 										<select className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium bg-gray-50 outline-none focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red transition-all" value={objective} onChange={(e) => setObjective(e.target.value)}>
-											{OBJECTIVES.map(o => <option key={o} value={o}>{o}</option>)}
+											{OBJECTIVES.map(obj => <option key={obj} value={obj}>{OBJ_KEYS[obj] ? t(OBJ_KEYS[obj]) : obj}</option>)}
 										</select>
 									</div>
 									<div className="space-y-1.5 lg:col-span-2">
-										<label className="text-sm font-bold text-dark-bg">Target Audience</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_audience')}</label>
 										<input 
 											type="text" 
 											placeholder="e.g. Office workers 25-35, Moms with babies" 
@@ -245,7 +261,7 @@ export default function CampaignBuilderPage() {
 										/>
 									</div>
 									<div className="space-y-1.5 lg:col-span-2">
-										<label className="text-sm font-bold text-dark-bg">Key Offer / Promotion</label>
+										<label className="text-sm font-bold text-dark-bg">{t('campaign_promotion')}</label>
 										<input 
 											type="text" 
 											placeholder="e.g. Buy 1 Get 1 Free, 50% Off until midnight" 
@@ -259,7 +275,7 @@ export default function CampaignBuilderPage() {
 								<div className="mt-auto pt-4">
 									{isBanned && (
 										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
-											<ShieldAlert className="w-4 h-4" /> Account Suspended
+											<ShieldAlert className="w-4 h-4" /> {t('general_suspended')}
 										</div>
 									)}
 									<button
@@ -267,7 +283,7 @@ export default function CampaignBuilderPage() {
 										disabled={isButtonDisabled}
 										className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${isButtonDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70' : 'bg-dark-bg hover:bg-primary-red text-white'}`}
 									>
-										{isGenerating ? <><Sparkles className="w-4 h-4 animate-spin" /> Generating Agency Copy...</> : <><Megaphone className="w-4 h-4" /> Build Campaign (-{COST_PER_CAMPAIGN} Coins)</>}
+										{isGenerating ? <><Sparkles className="w-4 h-4 animate-spin" /> {t('campaign_generating')}</> : <><Megaphone className="w-4 h-4" /> {t('campaign_build_btn')} (-{COST_PER_CAMPAIGN} Coins)</>}
 									</button>
 								</div>
 							</div>
@@ -282,7 +298,7 @@ export default function CampaignBuilderPage() {
 								</div>
 								{generatedCaption && (
 									<button onClick={() => copyToClipboard(generatedCaption)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isCopied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 hover:bg-gray-100 text-gray-600'}`}>
-										{isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isCopied ? 'Copied!' : 'Copy'}
+										{isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isCopied ? t('general_copied') : t('general_copy')}
 									</button>
 								)}
 							</div>
@@ -291,14 +307,14 @@ export default function CampaignBuilderPage() {
 								{isGenerating ? (
 									<div className="absolute inset-0 flex flex-col items-center justify-center text-primary-red animate-pulse">
 										<Sparkles className="w-10 h-10 mb-2" />
-										<p className="text-sm font-bold text-dark-bg">Writing Agency-Level Copy...</p>
+										<p className="text-sm font-bold text-dark-bg">{t('campaign_generating')}</p>
 									</div>
 								) : generatedCaption ? (
 									<div className="flex flex-col gap-6 py-4 w-full h-full max-w-[500px] mx-auto">
 										
 										{/* Editable Text Area for Copy */}
 										<div className="flex flex-col gap-2">
-											<label className="text-sm font-bold text-dark-bg">Generated Copy (Editable)</label>
+											<label className="text-sm font-bold text-dark-bg">{t('campaign_editable')}</label>
 											<textarea
 												className="w-full min-h-[220px] border border-gray-200 bg-white rounded-xl p-4 text-[14px] text-gray-800 leading-relaxed focus:ring-2 focus:ring-primary-red/20 focus:border-primary-red outline-none resize-y shadow-sm"
 												value={generatedCaption}
@@ -307,7 +323,7 @@ export default function CampaignBuilderPage() {
 										</div>
 
 										<div className="border-t border-gray-200 pt-6">
-											<h3 className="text-sm font-bold text-dark-bg mb-4 text-center">Live Preview</h3>
+											<h3 className="text-sm font-bold text-dark-bg mb-4 text-center">{t('campaign_live_preview')}</h3>
 											{/* Facebook Mockup */}
 										{platform === 'Facebook' && (
 											<div className="bg-white border border-gray-200 rounded-xl shadow-sm w-full max-w-[420px] h-fit overflow-hidden flex flex-col mx-auto animate-in zoom-in-95 duration-300">
@@ -461,7 +477,7 @@ export default function CampaignBuilderPage() {
 								) : (
 									<div className="absolute inset-0 flex flex-col items-center justify-center text-text-main/30">
 										<Megaphone className="w-10 h-10 mb-3 opacity-50" />
-										<p className="text-sm font-medium">Your highly-converting caption will appear here.</p>
+										<p className="text-sm font-medium">{t('campaign_no_campaigns')}</p>
 									</div>
 								)}
 							</div>
@@ -486,7 +502,7 @@ export default function CampaignBuilderPage() {
 									</div>
 									<div className="mt-auto pt-4 border-t border-gray-100">
 										<button onClick={() => copyToClipboard(campaign.prompt)} className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-dark-bg border border-gray-200 rounded-lg text-xs font-bold flex justify-center items-center gap-2 transition-all">
-											<Copy className="w-3.5 h-3.5" /> Copy Caption
+											<Copy className="w-3.5 h-3.5" /> {t('campaign_copy_caption')}
 										</button>
 									</div>
 								</div>
@@ -494,7 +510,7 @@ export default function CampaignBuilderPage() {
 						)) : (
 							<div className="col-span-full py-20 text-center text-gray-400">
 								<History className="w-12 h-12 mx-auto mb-3 opacity-20" />
-								<p className="font-bold">No campaigns yet. Let's create one!</p>
+								<p className="font-bold">{t('campaign_no_campaigns')}</p>
 							</div>
 						)}
 					</div>
@@ -506,8 +522,8 @@ export default function CampaignBuilderPage() {
 						<div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-200">
 							<div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
 								<h3 className="font-bold text-dark-bg flex items-center gap-2">
-									<ImageIcon className="w-5 h-5 text-primary-red" /> 
-									Select Image
+									<ImageIcon className="w-5 h-5 text-primary-red" />
+									{t('campaign_select_image')}
 								</h3>
 								<button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-full transition-all text-gray-500">
 									<X className="w-5 h-5" />
@@ -526,7 +542,7 @@ export default function CampaignBuilderPage() {
 												<img src={img.outputUrl} alt="Gallery item" className="absolute inset-0 w-full h-full object-cover" />
 												<div className="absolute inset-0 bg-primary-red/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
 													<div className="bg-white text-primary-red text-xs font-bold px-4 py-1.5 rounded-full shadow-sm transform scale-95 group-hover:scale-100 transition-all">
-														Select
+														{t('campaign_select_image')}
 													</div>
 												</div>
 											</div>
@@ -535,7 +551,7 @@ export default function CampaignBuilderPage() {
 								) : (
 									<div className="h-full flex flex-col items-center justify-center text-gray-400 gap-3 py-20">
 										<ImageIcon className="w-12 h-12 opacity-20" />
-										<p className="font-medium text-sm">No images found in your gallery.</p>
+										<p className="font-medium text-sm">{t('campaign_no_campaigns')}</p>
 									</div>
 								)}
 							</div>

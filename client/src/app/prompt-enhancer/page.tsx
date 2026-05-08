@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert, Type, AlignLeft, Globe } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { useLanguage } from "@/lib/useLanguage";
+import type { TranslationKey } from "@/lib/translations";
 
 const CATEGORIES = [
 	"Product Photography", "T-Shirt Design", "Sticker & Die-cut",
@@ -17,10 +19,36 @@ const toneOptions = ['Creative & Professional', 'Direct & Minimalist', 'Dramatic
 const lengthOptions = ['Short (around 20-30 words)', 'Medium (around 50-80 words)', 'Long (around 100-150 words)'];
 const languageOptions = ['English', 'Thai', 'Japanese', 'Chinese', 'Korean'];
 
+// Lookup maps: English value → translation key
+const CAT_KEYS: Record<string, TranslationKey> = {
+  'Product Photography': 'cat_product_photo',
+  'T-Shirt Design': 'cat_tshirt',
+  'Sticker & Die-cut': 'cat_sticker',
+  'Packaging Design': 'cat_packaging',
+  'Seamless Pattern': 'cat_pattern',
+  'Logo Concept': 'cat_logo',
+  '3D Icon': 'cat_3d',
+  'Product Mockup': 'cat_mockup',
+};
+const TONE_KEYS: Record<string, TranslationKey> = {
+  'Creative & Professional': 'tone_creative',
+  'Direct & Minimalist': 'tone_direct',
+  'Dramatic & Cinematic': 'tone_dramatic',
+  'Cute & Friendly': 'tone_cute',
+  'Luxury & Elegant': 'tone_luxury',
+  'Tech & Futuristic': 'tone_tech',
+};
+const LEN_KEYS: Record<string, TranslationKey> = {
+  'Short (around 20-30 words)': 'len_short',
+  'Medium (around 50-80 words)': 'len_medium',
+  'Long (around 100-150 words)': 'len_long',
+};
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PromptEnhancerPage() {
 	const { data: session } = useSession();
+	const { t } = useLanguage();
 	const [idea, setIdea] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("Product Photography");
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
@@ -104,9 +132,9 @@ export default function PromptEnhancerPage() {
 					<div>
 						<h1 className="text-2xl font-black text-dark-bg tracking-tight flex items-center gap-2">
 							<PackageOpen className="w-6 h-6 text-primary-red" />
-							Product Prompt Magic
+							{t('prompt_title')}
 						</h1>
-						<p className="text-text-main/60 text-sm mt-1 font-medium">Turn simple ideas into highly-converting commercial product designs.</p>
+						<p className="text-text-main/60 text-sm mt-1 font-medium">{t('prompt_sub')}</p>
 					</div>
 				</div>
 
@@ -114,15 +142,15 @@ export default function PromptEnhancerPage() {
 					{/* Left Side: Input Form */}
 					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
 						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20">
-							<h2 className="text-lg font-bold text-dark-bg">What are you selling?</h2>
-							<p className="text-xs text-text-main/50 font-medium">Define your product idea and asset type.</p>
+							<h2 className="text-lg font-bold text-dark-bg">{t('prompt_input_label')}</h2>
+							<p className="text-xs text-text-main/50 font-medium">{t('prompt_sub')}</p>
 						</div>
 
 						<div className="p-5 sm:p-6 flex-1 flex flex-col gap-5">
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Tags className="w-4 h-4 text-primary-red" /> Product Type
+									<Tags className="w-4 h-4 text-primary-red" /> {t('image_category')}
 								</label>
 								<div className="flex flex-wrap gap-2">
 									{CATEGORIES.map((cat) => (
@@ -134,7 +162,7 @@ export default function PromptEnhancerPage() {
 												: 'bg-light-gray/50 text-text-main/60 border-gray-200 hover:border-primary-red/50 hover:text-dark-bg'
 												}`}
 										>
-											{cat}
+											{CAT_KEYS[cat] ? t(CAT_KEYS[cat]) : cat}
 										</button>
 									))}
 								</div>
@@ -144,31 +172,31 @@ export default function PromptEnhancerPage() {
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<Type className="w-3.5 h-3.5 text-primary-red" /> Tone
+										<Type className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_tone')}
 									</label>
 									<select 
 										value={tone} 
 										onChange={(e) => setTone(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{toneOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{toneOptions.map(opt => <option key={opt} value={opt}>{TONE_KEYS[opt] ? t(TONE_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<AlignLeft className="w-3.5 h-3.5 text-primary-red" /> Length
+										<AlignLeft className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_length')}
 									</label>
 									<select 
 										value={length} 
 										onChange={(e) => setLength(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
-										{lengthOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+										{lengthOptions.map(opt => <option key={opt} value={opt}>{LEN_KEYS[opt] ? t(LEN_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
-										<Globe className="w-3.5 h-3.5 text-primary-red" /> Output Language
+										<Globe className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_language')}
 									</label>
 									<select 
 										value={outputLanguage} 
@@ -181,7 +209,7 @@ export default function PromptEnhancerPage() {
 							</div>
 
 							<div className="space-y-3 flex-1 flex flex-col">
-								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">Core Idea</label>
+								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">{t('prompt_enhance_btn')}</label>
 								<textarea
 									rows={4}
 									value={idea}
@@ -194,7 +222,7 @@ export default function PromptEnhancerPage() {
 							<div className="mt-auto">
 								{isBanned && (
 									<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
-										<ShieldAlert className="w-4 h-4" /> Account Suspended
+										<ShieldAlert className="w-4 h-4" /> {t('general_suspended')}
 									</div>
 								)}
 
@@ -207,19 +235,13 @@ export default function PromptEnhancerPage() {
 										}`}
 								>
 									{isEnhancing ? (
-										<>
-											<Sparkles className="w-4 h-4 animate-spin" />
-											Designing Product...
-										</>
+										<><Sparkles className="w-4 h-4 animate-spin" />{t('image_generating')}</>
 									) : isBanned ? (
-										'Suspended'
+										t('general_suspended')
 									) : currentCoins < currentCost ? (
-										`Insufficient Coins (${currentCost} Coins)`
+										t('general_not_enough_coins')
 									) : (
-										<>
-											<Wand2 className="w-4 h-4" />
-											Enhance Prompt (-{currentCost} Coins)
-										</>
+										<><Wand2 className="w-4 h-4" />{t('prompt_enhance_btn')} (-{currentCost} Coins)</>
 									)}
 								</button>
 							</div>
@@ -230,8 +252,8 @@ export default function PromptEnhancerPage() {
 					<section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col relative group">
 						<div className="p-5 sm:p-6 border-b border-gray-100 bg-light-gray/20 flex justify-between items-center">
 							<div>
-								<h2 className="text-lg font-bold text-dark-bg">Ready to Generate</h2>
-								<p className="text-xs text-text-main/50 font-medium">Copy this to Image Studio</p>
+								<h2 className="text-lg font-bold text-dark-bg">{t('prompt_result_placeholder')}</h2>
+								<p className="text-xs text-text-main/50 font-medium">{t('image_let_ai_think')}</p>
 							</div>
 							{enhancedPrompt && (
 								<button
@@ -240,7 +262,7 @@ export default function PromptEnhancerPage() {
 										}`}
 								>
 									{isCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-									{isCopied ? 'Copied!' : 'Copy'}
+									{isCopied ? t('general_copied') : t('general_copy')}
 								</button>
 							)}
 						</div>
@@ -249,7 +271,7 @@ export default function PromptEnhancerPage() {
 							{isEnhancing ? (
 								<div className="absolute inset-0 flex flex-col items-center justify-center text-primary-red animate-pulse">
 									<Sparkles className="w-10 h-10 mb-2" />
-									<p className="text-sm font-bold text-dark-bg">Adding commercial details...</p>
+									<p className="text-sm font-bold text-dark-bg">{t('image_generating')}</p>
 								</div>
 							) : enhancedPrompt ? (
 								<div className="h-full">
@@ -260,7 +282,7 @@ export default function PromptEnhancerPage() {
 							) : (
 								<div className="absolute inset-0 flex flex-col items-center justify-center text-text-main/30">
 									<PackageOpen className="w-10 h-10 mb-3 opacity-50" />
-									<p className="text-sm font-medium">Your commercial prompt will appear here.</p>
+									<p className="text-sm font-medium">{t('prompt_result_placeholder')}</p>
 								</div>
 							)}
 						</div>

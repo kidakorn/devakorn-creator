@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AuthProvider from "@/components/AuthProvider";
+import LanguageWrapper from "@/components/LanguageWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans bg-gray-50 text-text-main antialiased`}>
         <Toaster position="top-center" reverseOrder={false} />
         <AuthProvider>
-          {children}
+          <LanguageWrapper>
+            {children}
+          </LanguageWrapper>
         </AuthProvider>
       </body>
     </html>
