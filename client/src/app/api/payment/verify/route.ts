@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-
-const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
@@ -66,16 +64,41 @@ export async function POST(req: Request) {
     // 2. Verify Receiver (ป้องกันเอาสลิปโอนเงินให้คนอื่นมาเติม)
     // เช็คว่า proxyId (พร้อมเพย์) หรือ account (เลขบัญชี) ตรงกับของเราหรือไม่
     const receiver = responseData.receiver || {};
-    const merchantPromptPay = process.env.PROMPTPAY_ID?.replace(/-/g, '');
+    let merchantPromptPay = process.env.PROMPTPAY_ID?.replace(/-/g, '');
     
-    // ดึงค่าผู้รับออกมา (บางธนาคารให้ proxyId บางที่ให้ accountTo)
-    const slipReceiverId = (receiver.proxyId || receiver.accountTo || receiver.account || '').toString().replace(/-/g, '');
+    // ถ้าเบอร์มือถือขึ้นต้นด้วย 0 ให้ตัด 0 ออก เพื่อรองรับกรณีที่ API ส่งกลับมาเป็นรหัสประเทศ (66)
+    if (merchantPromptPay && merchantPromptPay.startsWith('0') && merchantPromptPay.length === 10) {
+      merchantPromptPay = merchantPromptPay.substring(1);
+    }
     
-    // ถ้าตั้งค่า PROMPTPAY_ID ไว้ใน .env และในสลิปมีข้อมูลผู้รับ ให้ตรวจสอบว่าตรงกันไหม
-    if (merchantPromptPay && slipReceiverId && !slipReceiverId.includes(merchantPromptPay)) {
+    // แปลง object ผู้รับให้อยู่ในรูป String เพื่อป้องกันปัญหา [object Object]
+    const slipReceiverRaw = JSON.stringify(receiver);
+    let isMatch = false;
+    
+    if (merchantPromptPay) {
+      if (slipReceiverRaw.includes(merchantPromptPay)) {
+        // กรณีเจอเบอร์ตรงๆ ใน JSON (ทั้งแบบมี 0 และไม่มี 0 นำหน้า เพราะ merchantPromptPay ตัด 0 ออกไปแล้ว)
+        isMatch = true;
+      } else {
+        // กรณี API ส่งค่าเซ็นเซอร์มา เช่น "xxx-xxx-6314" หรือมีรหัสธนาคารปนมา
+        // ให้ดึง "ตัวเลขที่ติดกัน 3 ตัวขึ้นไป" ออกมาเช็คทั้งหมดว่า merchantPromptPay ลงท้ายด้วยตัวเลขชุดนี้หรือไม่
+        const numberGroups = slipReceiverRaw.match(/\d{3,}/g) || [];
+        for (const num of numberGroups) {
+          if (merchantPromptPay.endsWith(num)) {
+            isMatch = true;
+            break;
+          }
+        }
+      }
+    } else {
+      isMatch = true; // กรณีที่ไม่ได้ตั้งค่า PROMPTPAY_ID
+    }
+
+    // ถ้าตั้งค่า PROMPTPAY_ID ไว้ใน .env และไม่ตรงกัน
+    if (!isMatch) {
         return NextResponse.json({ 
             error: 'Invalid receiver', 
-            details: 'สลิปนี้ไม่ได้โอนเข้าบัญชีที่กำหนด (Merchant Account Mismatch)' 
+            details: `สลิปนี้ไม่ได้โอนเข้าบัญชีที่กำหนด \n(คาดหวัง: ${merchantPromptPay}, สลิป: ${slipReceiverRaw})` 
         }, { status: 400 });
     }
 

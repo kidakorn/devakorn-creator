@@ -9,6 +9,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Zap, Coins, History, CreditCard, X, CheckCircle2, Sparkles, Star, UploadCloud, QrCode } from "lucide-react";
 import useSWR from 'swr';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'react-hot-toast';
+import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -24,7 +26,7 @@ const PRESETS = [
 	{ amount: 999, tag: "Max Bonus", bonusPercent: 15, highlight: false },
 ];
 
-export default function WalletDashboardPage() {
+function WalletDashboardPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -82,11 +84,11 @@ export default function WalletDashboardPage() {
 				setSlipFile(null);
 				setSlipPreview(null);
 			} else {
-				alert("Error: " + data.error);
+				toast.error("Error: " + data.error);
 			}
 		} catch (error) {
 			console.error("QR Error:", error);
-			alert("Failed to generate QR Code");
+			toast.error("Failed to generate QR Code");
 		} finally {
 			setIsCheckingOut(false);
 		}
@@ -115,14 +117,14 @@ export default function WalletDashboardPage() {
 			const data = await res.json();
 			
 			if (data.success) {
-				alert(`Successfully added ${data.coinsAdded} coins!`);
+				toast.success(`Successfully added ${data.coinsAdded} coins!`);
 				setShowQR(false);
 			} else {
-				alert("Verification failed: " + data.error + (data.details ? `\nDetails: ${data.details}` : ''));
+				toast.error(`Verification failed: ${data.error}${data.details ? `\n${data.details}` : ''}`);
 			}
 		} catch (error) {
 			console.error("Verify Error:", error);
-			alert("An error occurred during verification");
+			toast.error("An error occurred during verification");
 		} finally {
 			setIsVerifying(false);
 		}
@@ -332,7 +334,7 @@ export default function WalletDashboardPage() {
 			{/* QR Code & Slip Modal */}
 			{showQR && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-					<div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+					<div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
 						<div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
 							<h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
 								<QrCode className="w-4 h-4 text-red-500" /> PromptPay QR
@@ -342,7 +344,7 @@ export default function WalletDashboardPage() {
 							</button>
 						</div>
 						
-						<div className="p-6 flex flex-col items-center">
+						<div className="p-6 flex flex-col items-center overflow-y-auto">
 							<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
 								<QRCodeSVG value={qrPayload} size={200} />
 							</div>
@@ -394,5 +396,13 @@ export default function WalletDashboardPage() {
 				</div>
 			)}
 		</DashboardLayout>
+	);
+}
+
+export default function PricingPage() {
+	return (
+		<Suspense fallback={<div className="flex h-screen items-center justify-center text-gray-500">Loading...</div>}>
+			<WalletDashboardPage />
+		</Suspense>
 	);
 }
