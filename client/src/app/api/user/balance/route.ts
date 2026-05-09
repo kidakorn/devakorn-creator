@@ -17,14 +17,16 @@ export async function GET() {
 			where: { email: session.user.email },
 			select: {
 				coinBalance: true,
-				isBanned: true // ดึงสถานะการแบนเพิ่มขึ้นมา
+				isBanned: true,
+				hasClaimedFreeCoins: true
 			}
 		});
 
 		// ส่งทั้งยอดเหรียญและสถานะการแบนกลับไปให้หน้าเว็บ
 		return NextResponse.json({
 			coinBalance: user?.coinBalance || 0,
-			isBanned: user?.isBanned || false // ส่งค่ากลับไปให้ SWR ใช้งาน
+			isBanned: user?.isBanned || false,
+			hasClaimedFreeCoins: user?.hasClaimedFreeCoins || false
 		});
 	} catch (error) {
 		return NextResponse.json({ error: "Failed to fetch balance" }, { status: 500 });

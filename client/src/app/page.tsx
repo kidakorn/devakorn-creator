@@ -159,6 +159,34 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Welcome Bonus Banner (Only show if not claimed) */}
+        {!balanceData?.hasClaimedFreeCoins && !hideBonusButton && (
+          <div className="bg-gradient-to-r from-red-600 to-red-500 rounded-3xl p-6 shadow-xl shadow-red-500/20 relative overflow-hidden group animate-in zoom-in duration-500">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Gift className="w-32 h-32 -mr-10 -mt-10" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner">
+                  <Sparkles className="w-8 h-8 text-white animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white tracking-tight">Special Welcome Gift! ✦</h3>
+                  <p className="text-white/80 text-sm font-medium mt-0.5">รับเหรียญเริ่มต้นฟรี เพื่อสัมผัสประสบการณ์สร้างสรรค์ด้วย AI ของเรา</p>
+                </div>
+              </div>
+              <button
+                onClick={handleClaimBonus}
+                disabled={isClaiming}
+                className="px-8 py-3.5 bg-white text-red-600 font-black text-sm rounded-2xl hover:bg-gray-50 transition-all shadow-lg active:scale-95 disabled:opacity-70 flex items-center gap-2 whitespace-nowrap"
+              >
+                {isClaiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+                Claim Free Coins Now
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[

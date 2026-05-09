@@ -20,9 +20,20 @@ export async function POST(req: Request) {
 		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 		if (!user) return NextResponse.json({ status: "error", message: "User not found" }, { status: 404 });
 
+		// 🛡️ อ่านค่าจาก Settings ที่แอดมินตั้งไว้
+		const coinSetting = await prisma.systemSetting.findUnique({ where: { key: "new_user_coins" } });
+		const BONUS_AMOUNT = coinSetting ? Math.max(0, parseInt(coinSetting.value) || 0) : 0;
+
+		if (BONUS_AMOUNT <= 0) {
+			return NextResponse.json({ 
+				status: "error", 
+				message: "ขออภัย ขณะนี้ยังไม่มีโปรโมชั่นแจกเหรียญฟรี" 
+			}, { status: 400 });
+		}
+
 		// 🛡️ เช็คด่านที่ 1: บัญชีนี้เคยกดรับไปหรือยัง?
 		if (user.hasClaimedFreeCoins) {
-			return NextResponse.json({ status: "error", message: "คุณได้รับสิทธิ์ 50 เหรียญฟรีไปแล้ว" }, { status: 403 });
+			return NextResponse.json({ status: "error", message: `คุณได้รับสิทธิ์ ${BONUS_AMOUNT} เหรียญฟรีไปแล้ว` }, { status: 403 });
 		}
 
 		// 🛡️ เช็คด่านที่ 2: คอมพิวเตอร์/มือถือ เครื่องนี้เคยกดรับไปหรือยัง?
@@ -36,8 +47,6 @@ export async function POST(req: Request) {
 				message: "อุปกรณ์นี้ถูกใช้รับสิทธิ์ไปแล้ว (จำกัด 1 สิทธิ์ / 1 อุปกรณ์)"
 			}, { status: 403 });
 		}
-
-		const BONUS_AMOUNT = 50;
 
 		// 💰 ทำการแจกเหรียญ (ใช้ Transaction เพื่อความชัวร์ว่าทุกอย่างบันทึกพร้อมกัน)
 		await prisma.$transaction([
@@ -65,7 +74,7 @@ export async function POST(req: Request) {
 					type: 'FREE_BONUS', // หมวดหมู่ที่เราเพิ่งเพิ่มไป
 					amount: BONUS_AMOUNT,
 					balanceAfter: user.coinBalance + BONUS_AMOUNT,
-					description: "Claimed New User Free 50 Coins",
+					description: `Claimed New User Free ${BONUS_AMOUNT} Coins`,
 					status: 'COMPLETED',
 				}
 			})
@@ -73,7 +82,7 @@ export async function POST(req: Request) {
 
 		return NextResponse.json({
 			status: "success",
-			message: "ยินดีด้วย! คุณได้รับ 50 เหรียญฟรีเรียบร้อยแล้ว",
+			message: `ยินดีด้วย! คุณได้รับ ${BONUS_AMOUNT} เหรียญฟรีเรียบร้อยแล้ว`,
 			newBalance: user.coinBalance + BONUS_AMOUNT
 		});
 

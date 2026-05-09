@@ -24,35 +24,13 @@ export async function POST(req: Request) {
 		// เข้ารหัสผ่าน
 		const hashedPassword = await bcrypt.hash(password, 10);
 
-		// อ่านค่า new_user_coins จาก SystemSetting (Admin ตั้งค่าได้)
-		const coinSetting = await prisma.systemSetting.findUnique({ where: { key: "new_user_coins" } });
-		const bonusCoins = coinSetting ? Math.max(0, parseInt(coinSetting.value) || 0) : 0;
-
-		// สร้าง User + บันทึก Transaction (ถ้ามี bonus) แบบ Atomic
-		const newUser = await prisma.$transaction(async (tx) => {
-			const user = await tx.user.create({
-				data: {
-					name,
-					email,
-					password: hashedPassword,
-					coinBalance: bonusCoins,
-				}
-			});
-
-			// บันทึก Transaction ถ้ามี bonus coins
-			if (bonusCoins > 0) {
-				await tx.transaction.create({
-					data: {
-						userId: user.id,
-						type: "FREE_BONUS",
-						amount: bonusCoins,
-						balanceAfter: bonusCoins,
-						description: `Welcome bonus — ${bonusCoins} coins`,
-					}
-				});
+		// บันทึก User ลงฐานข้อมูล
+		const newUser = await prisma.user.create({
+			data: {
+				name,
+				email,
+				password: hashedPassword,
 			}
-
-			return user;
 		});
 
 		return NextResponse.json({ message: "สมัครสมาชิกสำเร็จ!", user: newUser }, { status: 201 });
