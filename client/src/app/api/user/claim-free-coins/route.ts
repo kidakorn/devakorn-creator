@@ -11,16 +11,17 @@ export async function POST(req: Request) {
 			return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
 		}
 
-		// รับรหัสเครื่อง (visitorId) ที่ส่งมาจากหน้าบ้าน
+		// รับรหัสเครื่อง (visitorId) จากหน้าบ้าน
 		const { visitorId } = await req.json();
 		if (!visitorId) {
 			return NextResponse.json({ status: "error", message: "Device ID is required" }, { status: 400 });
 		}
 
+		// ดึงข้อมูล User
 		const user = await prisma.user.findUnique({ where: { email: session.user.email } });
 		if (!user) return NextResponse.json({ status: "error", message: "User not found" }, { status: 404 });
 
-		// 🛡️ อ่านค่าจาก Settings ที่แอดมินตั้งไว้
+		// 🛡️ 1. อ่านค่าจาก Settings ที่แอดมินตั้งไว้
 		const coinSetting = await prisma.systemSetting.findUnique({ where: { key: "new_user_coins" } });
 		const BONUS_AMOUNT = coinSetting ? Math.max(0, parseInt(coinSetting.value) || 0) : 0;
 
@@ -31,12 +32,15 @@ export async function POST(req: Request) {
 			}, { status: 400 });
 		}
 
-		// 🛡️ เช็คด่านที่ 1: บัญชีนี้เคยกดรับไปหรือยัง?
+		// 🛡️ 2. เช็คว่าบัญชีนี้เคยกดรับไปหรือยัง?
 		if (user.hasClaimedFreeCoins) {
-			return NextResponse.json({ status: "error", message: `คุณได้รับสิทธิ์ ${BONUS_AMOUNT} เหรียญฟรีไปแล้ว` }, { status: 403 });
+			return NextResponse.json({ 
+				status: "error", 
+				message: `คุณได้รับสิทธิ์ ${BONUS_AMOUNT} เหรียญฟรีไปแล้ว` 
+			}, { status: 403 });
 		}
 
-		// 🛡️ เช็คด่านที่ 2: คอมพิวเตอร์/มือถือ เครื่องนี้เคยกดรับไปหรือยัง?
+		// 🛡️ 3. เช็คว่ารหัสเครื่องนี้เคยกดรับไปหรือยัง?
 		const existingDevice = await prisma.deviceFingerprint.findUnique({
 			where: { visitorId: visitorId }
 		});
@@ -48,9 +52,14 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// 💰 ทำการแจกเหรียญ (ใช้ Transaction เพื่อความชัวร์ว่าทุกอย่างบันทึกพร้อมกัน)
+		// 🛡️ 4. ดึง IP Address
+		const forwarded = req.headers.get("x-forwarded-for");
+		const realIp = req.headers.get("x-real-ip");
+		const userIp = forwarded ? forwarded.split(',')[0] : (realIp || "127.0.0.1");
+
+		// 💰 5. ทำการแจกเหรียญแบบ Transaction
 		await prisma.$transaction([
-			// 1. เพิ่มเหรียญและเปลี่ยนสถานะว่ารับแล้ว
+			// เพิ่มเหรียญและเปลี่ยนสถานะ
 			prisma.user.update({
 				where: { id: user.id },
 				data: {
@@ -59,19 +68,20 @@ export async function POST(req: Request) {
 				}
 			}),
 
-			// 2. จดจำรหัสเครื่องนี้ลง Database
+			// จดจำรหัสเครื่องและ IP
 			prisma.deviceFingerprint.create({
 				data: {
 					visitorId: visitorId,
-					userId: user.id
+					userId: user.id,
+					ip: userIp
 				}
 			}),
 
-			// 3. บันทึกประวัติลงสมุดบัญชี (Ledger)
+			// บันทึกประวัติ Transaction
 			prisma.transaction.create({
 				data: {
 					userId: user.id,
-					type: 'FREE_BONUS', // หมวดหมู่ที่เราเพิ่งเพิ่มไป
+					type: 'FREE_BONUS',
 					amount: BONUS_AMOUNT,
 					balanceAfter: user.coinBalance + BONUS_AMOUNT,
 					description: `Claimed New User Free ${BONUS_AMOUNT} Coins`,
@@ -88,6 +98,9 @@ export async function POST(req: Request) {
 
 	} catch (error: any) {
 		console.error("Claim Free Coins Error:", error.message);
-		return NextResponse.json({ status: "error", message: "Failed to claim free coins" }, { status: 500 });
+		return NextResponse.json({ 
+			status: "error", 
+			message: "เกิดข้อผิดพลาดในการรับเหรียญ โปรดลองใหม่อีกครั้ง" 
+		}, { status: 500 });
 	}
 }

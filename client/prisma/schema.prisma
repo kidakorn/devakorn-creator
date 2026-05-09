@@ -176,6 +176,7 @@ model DeviceFingerprint {
   id        String   @id @default(cuid())
   visitorId String   @unique // รหัสประจำเครื่อง (จาก FingerprintJS)
   userId    String // ใครเป็นคนใช้เครื่องนี้กดรับไป
+  ip        String?  // 🟢 เก็บ IP ของคนที่กดรับสิทธิ์
   createdAt DateTime @default(now())
 }
 
