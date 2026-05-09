@@ -21,16 +21,38 @@ export async function POST(req: Request) {
 			return NextResponse.json({ message: "อีเมลนี้มีผู้ใช้งานแล้ว" }, { status: 409 });
 		}
 
-		// เข้ารหัสผ่านให้เป็นข้อความที่อ่านไม่ออก (เพื่อความปลอดภัยสูงสุด)
+		// เข้ารหัสผ่าน
 		const hashedPassword = await bcrypt.hash(password, 10);
 
-		// บันทึก User ลงฐานข้อมูล (แถมฟรี 100 เหรียญตาม Schema ที่เราตั้งไว้!)
-		const newUser = await prisma.user.create({
-			data: {
-				name,
-				email,
-				password: hashedPassword,
+		// อ่านค่า new_user_coins จาก SystemSetting (Admin ตั้งค่าได้)
+		const coinSetting = await prisma.systemSetting.findUnique({ where: { key: "new_user_coins" } });
+		const bonusCoins = coinSetting ? Math.max(0, parseInt(coinSetting.value) || 0) : 0;
+
+		// สร้าง User + บันทึก Transaction (ถ้ามี bonus) แบบ Atomic
+		const newUser = await prisma.$transaction(async (tx) => {
+			const user = await tx.user.create({
+				data: {
+					name,
+					email,
+					password: hashedPassword,
+					coinBalance: bonusCoins,
+				}
+			});
+
+			// บันทึก Transaction ถ้ามี bonus coins
+			if (bonusCoins > 0) {
+				await tx.transaction.create({
+					data: {
+						userId: user.id,
+						type: "FREE_BONUS",
+						amount: bonusCoins,
+						balanceAfter: bonusCoins,
+						description: `Welcome bonus — ${bonusCoins} coins`,
+					}
+				});
 			}
+
+			return user;
 		});
 
 		return NextResponse.json({ message: "สมัครสมาชิกสำเร็จ!", user: newUser }, { status: 201 });
@@ -39,4 +61,4 @@ export async function POST(req: Request) {
 		console.error("Error creating user:", error);
 		return NextResponse.json({ message: "เกิดข้อผิดพลาดในการสมัครสมาชิก" }, { status: 500 });
 	}
-}
+}

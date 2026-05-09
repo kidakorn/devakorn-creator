@@ -82,6 +82,35 @@ export const authOptions: NextAuthOptions = {
 	},
 	pages: { signIn: "/login" },
 	secret: process.env.NEXTAUTH_SECRET,
+	events: {
+		// ยิงทุกครั้งที่มีการสร้าง User ใหม่ (รองรับทั้ง Google OAuth และ Credentials)
+		async createUser({ user }) {
+			try {
+				const coinSetting = await prisma.systemSetting.findUnique({ where: { key: "new_user_coins" } });
+				const bonusCoins = coinSetting ? Math.max(0, parseInt(coinSetting.value) || 0) : 0;
+
+				if (bonusCoins > 0 && user.id) {
+					await prisma.$transaction([
+						prisma.user.update({
+							where: { id: user.id },
+							data: { coinBalance: bonusCoins },
+						}),
+						prisma.transaction.create({
+							data: {
+								userId: user.id,
+								type: "FREE_BONUS",
+								amount: bonusCoins,
+								balanceAfter: bonusCoins,
+								description: `Welcome bonus — ${bonusCoins} coins`,
+							},
+						}),
+					]);
+				}
+			} catch (err) {
+				console.error("[createUser event] Failed to award bonus coins:", err);
+			}
+		},
+	},
 };
 
 const handler = NextAuth(authOptions);

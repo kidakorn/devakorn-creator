@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import {
 	User, Save, Loader2, Activity, CheckCircle2, ShieldAlert, Database, Zap,
-	ImageIcon, Clapperboard, Wand2, Cpu
+	ImageIcon, Clapperboard, Wand2, Cpu, Coins
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -28,6 +28,7 @@ export default function Settings() {
 	const [systemStatus, setSystemStatus] = useState<'idle' | 'online' | 'error'>('idle');
 	const [apiModels, setApiModels] = useState<any[]>([]);
 	const [projectId, setProjectId] = useState("");
+	const [newUserCoins, setNewUserCoins] = useState(0);
 
 	useEffect(() => {
 		if (status === "unauthenticated") {
@@ -49,6 +50,7 @@ export default function Settings() {
 			if (data.status === 'success') {
 				setFullName(data.user.name || "");
 				setBusinessEmail(data.user.email || "");
+				setNewUserCoins(data.newUserCoins ?? 0);
 				setLastSynced("Just now");
 			}
 		} catch (error) {
@@ -65,7 +67,7 @@ export default function Settings() {
 			const res = await fetch('/api/admin/settings', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: fullName, email: businessEmail })
+				body: JSON.stringify({ name: fullName, email: businessEmail, newUserCoins })
 			});
 			const result = await res.json();
 
@@ -242,6 +244,54 @@ export default function Settings() {
 
 							</div>
 						)}
+					</div>
+				</section>
+
+				{/* NEW USER COINS */}
+				<section className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+					<div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-4">
+						<div className="w-10 h-10 bg-yellow-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/20">
+							<Coins className="w-5 h-5" />
+						</div>
+						<div>
+							<h2 className="text-lg font-bold text-gray-900">New User Bonus Coins</h2>
+							<p className="text-xs text-gray-500 mt-0.5">จำนวน Coins ที่ผู้สมัครใหม่จะได้รับอัตโนมัติ (0 = ปิดใช้งาน)</p>
+						</div>
+					</div>
+					<div className="p-8">
+						<div className="flex items-center gap-4">
+							<div className="relative flex-1 max-w-xs">
+								<Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-500" />
+								<input
+									id="new-user-coins-input"
+									type="number"
+									min={0}
+									value={newUserCoins}
+									onChange={(e) => setNewUserCoins(Math.max(0, parseInt(e.target.value) || 0))}
+									className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-yellow-500/20 focus:border-yellow-500 transition-all"
+								/>
+							</div>
+							<div className="text-sm text-gray-500">
+								{newUserCoins > 0 ? (
+									<span className="font-bold text-yellow-600 bg-yellow-50 border border-yellow-200 px-3 py-1.5 rounded-lg text-xs">
+										✦ ผู้สมัครใหม่จะได้รับ {newUserCoins.toLocaleString()} Coins
+									</span>
+								) : (
+									<span className="font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg text-xs">ปิดใช้งาน</span>
+								)}
+							</div>
+						</div>
+						<p className="text-xs text-gray-400 mt-3">* การเปลี่ยนแปลงจะมีผลกับผู้สมัครรายใหม่เท่านั้น ไม่กระทบผู้ใช้ที่สมัครไปแล้ว</p>
+					</div>
+					<div className="px-8 pb-8 flex justify-end">
+						<button
+							onClick={handleSave}
+							disabled={isSaving}
+							className="px-8 py-3 bg-yellow-500 text-white font-black text-sm rounded-xl hover:bg-yellow-600 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-yellow-500/20 active:scale-95"
+						>
+							{isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+							Save Coin Setting
+						</button>
 					</div>
 				</section>
 
