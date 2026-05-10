@@ -18,30 +18,45 @@ const CATEGORIES = [
 const toneOptions = ['Creative & Professional', 'Direct & Minimalist', 'Dramatic & Cinematic', 'Cute & Friendly', 'Luxury & Elegant', 'Tech & Futuristic'];
 const lengthOptions = ['Short (around 20-30 words)', 'Medium (around 50-80 words)', 'Long (around 100-150 words)'];
 const languageOptions = ['English', 'Thai', 'Japanese', 'Chinese', 'Korean'];
+const lightingOptions = ['Studio Light', 'Natural Light', 'Golden Hour', 'Dark & Moody', 'Neon'];
+const cameraOptions = ['Close-up', 'Wide Angle', 'Top-down', 'Eye-level'];
 
 // Lookup maps: English value → translation key
 const CAT_KEYS: Record<string, TranslationKey> = {
-  'Product Photography': 'cat_product_photo',
-  'T-Shirt Design': 'cat_tshirt',
-  'Sticker & Die-cut': 'cat_sticker',
-  'Packaging Design': 'cat_packaging',
-  'Seamless Pattern': 'cat_pattern',
-  'Logo Concept': 'cat_logo',
-  '3D Icon': 'cat_3d',
-  'Product Mockup': 'cat_mockup',
+	'Product Photography': 'cat_product_photo',
+	'T-Shirt Design': 'cat_tshirt',
+	'Sticker & Die-cut': 'cat_sticker',
+	'Packaging Design': 'cat_packaging',
+	'Seamless Pattern': 'cat_pattern',
+	'Logo Concept': 'cat_logo',
+	'3D Icon': 'cat_3d',
+	'Product Mockup': 'cat_mockup',
 };
 const TONE_KEYS: Record<string, TranslationKey> = {
-  'Creative & Professional': 'tone_creative',
-  'Direct & Minimalist': 'tone_direct',
-  'Dramatic & Cinematic': 'tone_dramatic',
-  'Cute & Friendly': 'tone_cute',
-  'Luxury & Elegant': 'tone_luxury',
-  'Tech & Futuristic': 'tone_tech',
+	'Creative & Professional': 'tone_creative',
+	'Direct & Minimalist': 'tone_direct',
+	'Dramatic & Cinematic': 'tone_dramatic',
+	'Cute & Friendly': 'tone_cute',
+	'Luxury & Elegant': 'tone_luxury',
+	'Tech & Futuristic': 'tone_tech',
 };
 const LEN_KEYS: Record<string, TranslationKey> = {
-  'Short (around 20-30 words)': 'len_short',
-  'Medium (around 50-80 words)': 'len_medium',
-  'Long (around 100-150 words)': 'len_long',
+	'Short (around 20-30 words)': 'len_short',
+	'Medium (around 50-80 words)': 'len_medium',
+	'Long (around 100-150 words)': 'len_long',
+};
+const LIGHT_KEYS: Record<string, TranslationKey> = {
+  'Studio Light': 'light_studio',
+  'Natural Light': 'light_natural',
+  'Golden Hour': 'light_golden',
+  'Dark & Moody': 'light_dark',
+  'Neon': 'light_neon',
+};
+const CAM_KEYS: Record<string, TranslationKey> = {
+  'Close-up': 'cam_closeup',
+  'Wide Angle': 'cam_wide',
+  'Top-down': 'cam_drone', // ใช้ cam_drone แทนชั่วคราวได้ครับ
+  'Eye-level': 'cam_tracking', // ใช้ cam_tracking หรือเพิ่ม key ใหม่ใน translations.ts ก็ได้ครับ
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -59,6 +74,8 @@ export default function PromptEnhancerPage() {
 	const [tone, setTone] = useState("Creative & Professional");
 	const [length, setLength] = useState("Medium (around 50-80 words)");
 	const [outputLanguage, setOutputLanguage] = useState("English");
+	const [lighting, setLighting] = useState("Studio Light");
+	const [cameraAngle, setCameraAngle] = useState("Close-up");
 
 	const { data: balanceData, mutate } = useSWR('/api/user/balance', fetcher, {
 		refreshInterval: 10000,
@@ -83,12 +100,14 @@ export default function PromptEnhancerPage() {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				// Send new parameters to API
-				body: JSON.stringify({ 
-					idea, 
+				body: JSON.stringify({
+					idea,
 					category: selectedCategory,
 					tone,
 					length,
-					outputLanguage
+					outputLanguage,
+					lighting,
+					cameraAngle
 				}),
 			});
 
@@ -169,13 +188,13 @@ export default function PromptEnhancerPage() {
 							</div>
 
 							{/* Advanced Settings */}
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
 										<Type className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_tone')}
 									</label>
-									<select 
-										value={tone} 
+									<select
+										value={tone}
 										onChange={(e) => setTone(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
@@ -186,8 +205,8 @@ export default function PromptEnhancerPage() {
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
 										<AlignLeft className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_length')}
 									</label>
-									<select 
-										value={length} 
+									<select
+										value={length}
 										onChange={(e) => setLength(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
@@ -198,12 +217,39 @@ export default function PromptEnhancerPage() {
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
 										<Globe className="w-3.5 h-3.5 text-primary-red" /> {t('prompt_language')}
 									</label>
-									<select 
-										value={outputLanguage} 
+									<select
+										value={outputLanguage}
 										onChange={(e) => setOutputLanguage(e.target.value)}
 										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
 									>
 										{languageOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+									</select>
+								</div>
+
+								{/* 🟢 ส่วนที่เพิ่มใหม่: แสงและมุมกล้อง */}
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Sparkles className="w-3.5 h-3.5 text-primary-red" /> {t('image_lighting') || 'Lighting'}
+									</label>
+									<select
+										value={lighting}
+										onChange={(e) => setLighting(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{lightingOptions.map(opt => <option key={opt} value={opt}>{LIGHT_KEYS[opt] ? t(LIGHT_KEYS[opt]) : opt}</option>)}
+									</select>
+								</div>
+
+								<div>
+									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
+										<Wand2 className="w-3.5 h-3.5 text-primary-red" /> {t('image_camera') || 'Camera Angle'}
+									</label>
+									<select
+										value={cameraAngle}
+										onChange={(e) => setCameraAngle(e.target.value)}
+										className="w-full border border-gray-200 bg-white rounded-lg p-2 text-xs font-medium text-dark-bg focus:ring-2 focus:ring-primary-red/20 outline-none cursor-pointer"
+									>
+										{cameraOptions.map(opt => <option key={opt} value={opt}>{CAM_KEYS[opt] ? t(CAM_KEYS[opt]) : opt}</option>)}
 									</select>
 								</div>
 							</div>

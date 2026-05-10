@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from "@/components/DashboardLayout";
-import { Zap, Coins, History, CreditCard, X, CheckCircle2, Sparkles, Star, UploadCloud, QrCode } from "lucide-react";
+import { Zap, Coins, History, CreditCard, X, CheckCircle2, Sparkles, Star, UploadCloud, QrCode, Timer, RefreshCw, FileImage } from "lucide-react"; // 🟢 เพิ่มไอคอน Timer, RefreshCw, FileImage
 import useSWR from 'swr';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
@@ -16,6 +16,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const EXCHANGE_RATE = 10;
 const MIN_AMOUNT = 30;
+const QR_TIMEOUT_SECONDS = 300; // 🟢 ตั้งเวลา QR Cooldown 5 นาที (300 วินาที)
 
 const PRESETS = [
 	{ amount: 39, tag: null, highlight: false },
@@ -44,6 +45,7 @@ function WalletDashboardPage() {
 	const [slipFile, setSlipFile] = useState<File | null>(null);
 	const [slipPreview, setSlipPreview] = useState<string | null>(null);
 	const [isVerifying, setIsVerifying] = useState(false);
+	const [qrCountdown, setQrCountdown] = useState<number>(0); // 🟢 State สำหรับนับเวลา
 
 	const { data } = useSWR('/api/user/balance', fetcher, { refreshInterval: 10000, revalidateOnFocus: true });
 	const currentCoins = data?.coinBalance ?? 0;
@@ -51,6 +53,24 @@ function WalletDashboardPage() {
 	useEffect(() => {
 		if (searchParams.get('success') === 'true') router.replace('/pricing');
 	}, [searchParams, router]);
+
+	// 🟢 Logic ระบบนับถอยหลัง QR Code
+	useEffect(() => {
+		let interval: NodeJS.Timeout;
+		if (showQR && qrCountdown > 0 && !isVerifying) {
+			interval = setInterval(() => {
+				setQrCountdown((prev) => prev - 1);
+			}, 1000);
+		}
+		return () => clearInterval(interval);
+	}, [showQR, qrCountdown, isVerifying]);
+
+	// 🟢 แปลงวินาทีเป็นรูปแบบ MM:SS
+	const formatTime = (seconds: number) => {
+		const m = Math.floor(seconds / 60);
+		const s = seconds % 60;
+		return `${m}:${s.toString().padStart(2, '0')}`;
+	};
 
 	const calculateCoins = (thb: number | "") => {
 		if (thb === "" || thb < MIN_AMOUNT) return { base: 0, bonus: 0, total: 0 };
@@ -76,13 +96,14 @@ function WalletDashboardPage() {
 				body: JSON.stringify({ amount }),
 			});
 			const data = await response.json();
-			
+
 			if (data.payload) {
 				setQrPayload(data.payload);
 				setPromptpayName(data.promptpayName);
 				setShowQR(true);
 				setSlipFile(null);
 				setSlipPreview(null);
+				setQrCountdown(QR_TIMEOUT_SECONDS); // 🟢 เริ่มนับเวลาใหม่
 			} else {
 				toast.error("Error: " + data.error);
 			}
@@ -115,16 +136,33 @@ function WalletDashboardPage() {
 				body: formData,
 			});
 			const data = await res.json();
-			
+
 			if (data.success) {
-				toast.success(`Successfully added ${data.coinsAdded} coins!`);
+				toast.success(
+					<div className="flex flex-col">
+						<span className="font-bold text-gray-900">Payment Successful! 🎉</span>
+						<span className="text-sm text-gray-500">Added {data.coinsAdded} Coins to your wallet.</span>
+					</div>,
+					{ duration: 4000 }
+				);
 				setShowQR(false);
 			} else {
-				toast.error(`Verification failed: ${data.error}${data.details ? `\n${data.details}` : ''}`);
+				toast.error(
+					<div className="flex flex-col gap-0.5">
+						<span className="font-bold text-red-600">{data.error || 'Verification Failed'}</span>
+						{data.details && <span className="text-sm text-gray-600 leading-tight">{data.details}</span>}
+					</div>,
+					{ duration: 6000 }
+				);
 			}
 		} catch (error) {
 			console.error("Verify Error:", error);
-			toast.error("An error occurred during verification");
+			toast.error(
+				<div className="flex flex-col">
+					<span className="font-bold text-red-600">System Error</span>
+					<span className="text-sm text-gray-600">Could not connect to the server. Please try again.</span>
+				</div>
+			);
 		} finally {
 			setIsVerifying(false);
 		}
@@ -211,7 +249,7 @@ function WalletDashboardPage() {
 									onClick={() => setAmount(p.amount)}
 									className={`relative p-5 rounded-2xl border-2 text-left transition-all overflow-hidden group
 										${isSelected
-											? 'border-red-500 bg-gradient-to-br from-red-50 to-orange-50 shadow-md shadow-red-100'
+											? 'border-red-500 bg-linear-to-br from-red-50 to-orange-50 shadow-md shadow-red-100'
 											: 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-md'
 										}`}
 								>
@@ -268,7 +306,7 @@ function WalletDashboardPage() {
 						disabled={!isValidAmount || isCheckingOut}
 						className={`w-full mt-5 py-4 rounded-2xl font-black text-lg transition-all flex justify-center items-center gap-3 shadow-lg
 							${isValidAmount && !isCheckingOut
-								? "bg-gradient-to-r from-red-600 to-orange-500 text-white hover:shadow-xl hover:-translate-y-0.5 active:scale-95"
+								? "bg-linear-to-r from-red-600 to-orange-500 text-white hover:shadow-xl hover:-translate-y-0.5 active:scale-95"
 								: "bg-gray-100 text-gray-400 cursor-not-allowed"
 							}`}
 					>
@@ -283,7 +321,7 @@ function WalletDashboardPage() {
 
 			{/* History Modal */}
 			{showHistory && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
 					<div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200">
 						<div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
 							<h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
@@ -331,61 +369,120 @@ function WalletDashboardPage() {
 					</div>
 				</div>
 			)}
-			{/* QR Code & Slip Modal */}
+
+			{/* 🟢 NEW QR Code & Slip Modal (สไตล์สากล) */}
 			{showQR && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-					<div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-						<div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-							<h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-								<QrCode className="w-4 h-4 text-red-500" /> PromptPay QR
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
+					<div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 border border-gray-100">
+						{/* Header */}
+						<div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white relative z-10">
+							<h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+								<QrCode className="w-5 h-5 text-red-600" /> PromptPay QR
 							</h3>
-							<button onClick={() => setShowQR(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all">
-								<X className="w-4 h-4" />
+							<button onClick={() => setShowQR(false)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all">
+								<X className="w-5 h-5" />
 							</button>
 						</div>
-						
-						<div className="p-6 flex flex-col items-center overflow-y-auto">
-							<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-4">
-								<QRCodeSVG value={qrPayload} size={200} />
-							</div>
-							
-							<div className="text-center mb-6">
-								<p className="text-2xl font-black text-gray-900">฿{amount}</p>
-								<p className="text-sm font-medium text-gray-500 mt-1">{promptpayName}</p>
+
+						<div className="p-6 flex flex-col items-center overflow-y-auto bg-gray-50/50">
+
+							{/* QR Code Area */}
+							<div className="relative w-full flex flex-col items-center">
+								<div className={`bg-white p-4 rounded-2xl border-2 shadow-sm transition-all duration-300 ${qrCountdown === 0 ? 'border-red-200' : 'border-gray-200'}`}>
+									<div className={`transition-all duration-500 ${qrCountdown === 0 ? 'blur-sm opacity-50 grayscale' : ''}`}>
+										<QRCodeSVG value={qrPayload} size={200} />
+									</div>
+
+									{/* Overlay เมื่อ QR หมดเวลา */}
+									{qrCountdown === 0 && (
+										<div className="absolute inset-0 flex flex-col items-center justify-center z-10 mb-10">
+											<div className="bg-white/90 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg border border-gray-200 flex flex-col items-center">
+												<Timer className="w-6 h-6 text-red-500 mb-1" />
+												<p className="text-sm font-bold text-gray-900 mb-2">QR Code Expired</p>
+												<button onClick={handleCheckout} className="px-4 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg hover:bg-gray-800 transition-all flex items-center gap-1.5">
+													<RefreshCw className="w-3 h-3" /> Refresh QR
+												</button>
+											</div>
+										</div>
+									)}
+								</div>
+
+								{/* Timer Pill */}
+								<div className={`mt-4 px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border transition-colors
+									${qrCountdown > 60 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+										qrCountdown > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' :
+											'bg-red-50 text-red-600 border-red-200'}`}>
+									<Timer className="w-3.5 h-3.5" />
+									{qrCountdown > 0 ? `Expires in ${formatTime(qrCountdown)}` : 'Expired'}
+								</div>
 							</div>
 
+							{/* Price & Name Details */}
+							<div className="text-center my-6">
+								<p className="text-3xl font-black text-gray-900 tracking-tight">฿{amount}</p>
+								<p className="text-sm font-bold text-gray-500 mt-1">{promptpayName || "Devakorn AI"}</p>
+							</div>
+
+							{/* 🟢 Upload Slip Area (ปรับสไตล์ Drag & Drop) */}
 							<div className="w-full space-y-3">
-								<p className="text-sm font-bold text-gray-700">Upload Slip to Verify</p>
-								
+								<p className="text-sm font-black text-gray-900 flex items-center justify-between">
+									Payment Verification
+									{slipFile && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">Ready</span>}
+								</p>
+
 								{!slipPreview ? (
-									<label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-red-50 hover:border-red-200 transition-all cursor-pointer">
-										<UploadCloud className="w-8 h-8 text-gray-400 mb-2" />
-										<p className="text-xs font-medium text-gray-500">Click to upload slip</p>
-										<input type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+									<label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl transition-all cursor-pointer bg-white
+										${qrCountdown === 0 ? 'border-gray-200 opacity-50 cursor-not-allowed' : 'border-gray-300 hover:border-red-400 hover:bg-red-50'}`}>
+										<div className="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-2 shadow-sm border border-red-100">
+											<UploadCloud className="w-5 h-5" />
+										</div>
+										<p className="text-sm font-bold text-gray-700">Click to upload slip</p>
+										<p className="text-xs font-medium text-gray-400 mt-1">JPEG, PNG up to 5MB</p>
+										<input
+											type="file"
+											accept="image/jpeg, image/png, image/webp"
+											className="hidden"
+											onChange={handleSlipChange}
+											disabled={qrCountdown === 0}
+										/>
 									</label>
 								) : (
-									<div className="relative w-full h-40 rounded-xl overflow-hidden border border-gray-200">
-										<img src={slipPreview} alt="Slip" className="w-full h-full object-cover" />
-										<button 
-											onClick={() => { setSlipFile(null); setSlipPreview(null); }}
-											className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-all"
-										>
-											<X className="w-3 h-3" />
-										</button>
+									<div className="relative w-full rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-sm group">
+										<div className="flex items-center gap-3">
+											<div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-50">
+												<img src={slipPreview} alt="Slip" className="w-full h-full object-cover" />
+											</div>
+											<div className="flex-1 min-w-0">
+												<p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1.5">
+													<FileImage className="w-4 h-4 text-emerald-500" /> {slipFile?.name || "slip_image.jpg"}
+												</p>
+												<p className="text-xs text-gray-500 font-medium">
+													{(slipFile!.size / 1024 / 1024).toFixed(2)} MB
+												</p>
+											</div>
+											<button
+												onClick={() => { setSlipFile(null); setSlipPreview(null); }}
+												className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+												title="Remove slip"
+											>
+												<X className="w-5 h-5" />
+											</button>
+										</div>
 									</div>
 								)}
 
+								{/* Verify Button */}
 								<button
 									onClick={handleVerifySlip}
-									disabled={!slipFile || isVerifying}
-									className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex justify-center items-center gap-2
-										${slipFile && !isVerifying
-											? "bg-red-600 text-white hover:bg-red-700 shadow-md"
-											: "bg-gray-100 text-gray-400 cursor-not-allowed"
+									disabled={!slipFile || isVerifying || qrCountdown === 0}
+									className={`w-full py-4 rounded-2xl font-black text-sm transition-all flex justify-center items-center gap-2 shadow-lg mt-2
+										${slipFile && !isVerifying && qrCountdown > 0
+											? "bg-gray-900 text-white hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5"
+											: "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
 										}`}
 								>
 									{isVerifying ? (
-										<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Verifying...</>
+										<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Verifying Slip...</>
 									) : (
 										"Verify Payment"
 									)}

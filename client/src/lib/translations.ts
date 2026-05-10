@@ -230,6 +230,16 @@ export const translations = {
   vcat_stop_motion: { en: 'Stop Motion', th: 'Stop Motion' },
   vcat_3d_reveal: { en: '3D Product Reveal', th: '3D เปิดตัวสินค้า' },
   vcat_broll: { en: 'B-Roll Footage', th: 'B-Roll' },
+
+  // ---- LANDING PAGE ----
+  landing_signin: { en: 'Sign In', th: 'เข้าสู่ระบบ' },
+  landing_commercial_tools: { en: 'Commercial AI Tools', th: 'เครื่องมือ AI เชิงพาณิชย์' },
+  landing_hero_title_create: { en: 'CREATE ', th: 'สร้าง' },
+  landing_hero_title_pro: { en: 'PROFESSIONAL', th: 'ผลงานระดับมืออาชีพ' },
+  landing_hero_title_end: { en: ' AI VISUALS & VIDEOS IN SECONDS', th: 'ด้วย AI ในไม่กี่วินาที' },
+  landing_hero_sub: { en: 'Unlock the power of advanced AI models to build high-quality commercial assets instantly. Join the future of content creation.', th: 'ปลดล็อกพลังของโมเดล AI ขั้นสูงเพื่อสร้างสรรค์ชิ้นงานโฆษณาคุณภาพสูงได้ทันที พลิกโฉมอนาคตของการทำคอนเทนต์' },
+  landing_btn_start: { en: "START CREATING - IT'S FREE", th: 'เริ่มต้นสร้างผลงาน - ใช้ฟรี' },
+  landing_btn_explore: { en: 'EXPLORE SHOWCASE', th: 'ดูผลงานในชุมชน' },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         }
 
         // Receive flexible parameters from frontend
-        const { idea, category, tone, length, outputLanguage } = await req.json();
+        const { idea, category, tone, length, outputLanguage, lighting, cameraAngle } = await req.json(); // 🟢 เพิ่ม lighting, cameraAngle ตรงนี้เส้นแดงจะหายไป
         if (!idea) return NextResponse.json({ status: "error", message: "Idea is required." }, { status: 400 });
 
         const COST_PER_PROMPT = 15;
@@ -42,21 +42,23 @@ export async function POST(req: Request) {
 
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:generateContent`;
 
-        // Dynamic System Instruction: Craft new prompt based on user's choices
+        // Dynamic System Instruction
         const systemInstruction = `You are an elite AI Prompt Engineer. Your task is to transform a simple user idea into a highly detailed, professional prompt suitable for Midjourney, Stable Diffusion, or Veo.
         
         Target Category: ${category || 'General'}
         Desired Tone: ${tone || 'Creative & Professional'}
         Expected Length: ${length || 'Medium (around 50-80 words)'}
         Output Language: ${outputLanguage || 'English'}
+        Lighting Style: ${lighting || 'Studio Light'}
+        Camera Angle: ${cameraAngle || 'Close-up'}
         
-        RULES:
-        1. If the user provides a URL (e.g. Shopee, Lazada, Facebook), you MUST extract the core product features from that URL and use it to build the prompt.
-        2. Expand the simple idea by adding vivid descriptions, lighting conditions, camera angles, and stylistic keywords.
-        3. Strictly follow the expected length and output language. If the output language is Thai, use proper Thai terminology.
-        4. Provide ONLY the final enhanced prompt without any conversational text, explanations, or quotes.
-        5. DO NOT include any technical parameters or suffixes like "--ar", "--v", or "--style". Provide only the descriptive text.`;
-        
+        STRICT RULES:
+        1. CORE SUBJECT FIRST: You MUST focus strictly on the "Core Subject" provided in the User Idea. DO NOT hallucinate or add random objects, humans, or animals (e.g., cats, dogs) unless explicitly requested by the user.
+        2. If the user provides a URL (e.g. Shopee, Lazada), extract the core product features from that URL and use it to build the prompt.
+        3. Expand the simple idea ONLY by adding relevant lighting conditions, camera angles, textures, background environment, and stylistic keywords that match the Target Category. (If a specific Lighting Style or Camera Angle is provided above, YOU MUST USE IT).
+        4. Strictly follow the expected length and output language.
+        5. Provide ONLY the final enhanced prompt without any conversational text, explanations, or quotes. DO NOT include technical parameters (like "--ar").`;
+
 
         const response = await client.request({
             url: url,

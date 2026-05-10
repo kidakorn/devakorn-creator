@@ -9,6 +9,7 @@ import useSWR from "swr";
 import DatePicker from "react-datepicker";
 import { Activity, Clock, ImageIcon, VideoIcon, Play, Download, Loader2, LayoutGrid, ArrowRight, LineChart, Server, Calendar as CalendarIcon, ChevronDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useLanguage } from "@/lib/useLanguage"; // 🟢 1. Import useLanguage
 
 interface PublicAsset {
 	id: string;
@@ -45,13 +46,11 @@ const DashboardCalendarButton = forwardRef<HTMLButtonElement, any>(({ value, onC
 DashboardCalendarButton.displayName = "DashboardCalendarButton";
 
 export default function LandingPage() {
+	const { t, language, toggleLanguage } = useLanguage(); // 🟢 2. เรียกใช้งาน useLanguage
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-	// 🟢 State สำหรับ Pagination
 	const [currentPage, setCurrentPage] = useState(1);
 
 	const queryParams = new URLSearchParams();
-	
-	// 🟢 แนบเลขหน้าเข้าไปใน API
 	queryParams.append('page', currentPage.toString());
 
 	if (selectedDate) {
@@ -59,7 +58,7 @@ export default function LandingPage() {
 		const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
 		const day = String(selectedDate.getDate()).padStart(2, '0');
 		const formattedDate = `${year}-${month}-${day}`;
-		
+
 		queryParams.append('start', formattedDate);
 		queryParams.append('end', formattedDate);
 	}
@@ -69,11 +68,11 @@ export default function LandingPage() {
 	});
 
 	const showcaseAssets: PublicAsset[] = data?.status === "success" ? data.assets : [];
-	const totalPages = data?.pagination?.totalPages || 1; // 🟢 ดึงจำนวนหน้ามาจาก API
-	
+	const totalPages = data?.pagination?.totalPages || 1;
+
 	const totalAssets = data?.stats?.totalAssets || 0;
 	const formattedTotal = formatNumber(totalAssets);
-	
+
 	const globalUsageData = data?.stats?.chartData || [
 		{ name: 'Mon', image: 0, video: 0 },
 		{ name: 'Tue', image: 0, video: 0 },
@@ -94,7 +93,7 @@ export default function LandingPage() {
 
 	return (
 		<div className="min-h-screen bg-[#fafafa] font-sans flex flex-col text-gray-900 selection:bg-red-100 relative">
-			
+
 			<style>{`
 				.react-datepicker-wrapper { width: auto; }
 				.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
@@ -116,45 +115,63 @@ export default function LandingPage() {
 						<img src="/favicon.ico" alt="Devakorn Logo" className="w-8 h-8 object-contain" />
 						<span className="font-black text-xl tracking-tight text-gray-900 hidden sm:block">DEVAKORN AI</span>
 					</div>
-					<button
-						onClick={() => signIn()}
-						className="px-6 py-2.5 bg-gray-900 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
-					>
-						Sign In
-					</button>
+
+					{/* 🟢 3. ปุ่มสลับภาษาคู่กับปุ่ม Sign In */}
+					<div className="flex items-center gap-2 sm:gap-4">
+						<button
+							onClick={toggleLanguage}
+							className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-all shadow-sm"
+						>
+							{language === 'th' ? 'EN' : 'TH'}
+						</button>
+						<button
+							onClick={() => signIn()}
+							className="px-6 py-2.5 bg-gray-900 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-all shadow-sm hover:shadow-md"
+						>
+							{t('landing_signin')}
+						</button>
+					</div>
 				</nav>
 			</div>
 
 			<main className="flex-1 w-full max-w-7xl mx-auto p-6 md:p-8 space-y-16 z-10 relative">
 
+				{/* 🟢 4. ส่วน Hero Section */}
 				<section className="text-center pt-10 pb-20 sm:pt-16 sm:pb-28 flex flex-col items-center justify-center">
 					<div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-900 text-white font-bold text-xs shadow-lg mb-8 tracking-wide uppercase">
 						<Server className="w-4 h-4 text-red-500" />
-						Commercial AI Tools
+						{t('landing_commercial_tools')}
 					</div>
 					<h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 tracking-tight leading-[0.95] max-w-4xl">
-						CREATE <span className="text-red-600">PROFESSIONAL</span> AI VISUALS & VIDEOS IN SECONDS
+						{t('landing_hero_title_create')}
+						<span className="text-red-600">{t('landing_hero_title_pro')}</span>
+						{t('landing_hero_title_end')}
 					</h1>
 					<p className="text-gray-500 text-lg sm:text-xl font-medium mt-8 max-w-2xl leading-relaxed">
-						Unlock the power of <strong className="text-gray-900 font-bold">advanced AI models</strong> to build high-quality commercial assets instantly. Join the future of content creation.
+						{language === 'th' ? (
+							<>ปลดล็อกพลังของ <strong className="text-gray-900 font-bold">โมเดล AI ขั้นสูง</strong> เพื่อสร้างสรรค์ชิ้นงานโฆษณาคุณภาพสูงได้ทันที พลิกโฉมอนาคตของการทำคอนเทนต์</>
+						) : (
+							<>Unlock the power of <strong className="text-gray-900 font-bold">advanced AI models</strong> to build high-quality commercial assets instantly. Join the future of content creation.</>
+						)}
 					</p>
-					
+
 					<div className="flex flex-col sm:flex-row gap-4 mt-12 w-full sm:w-auto">
-						<button 
+						<button
 							onClick={() => signIn()}
 							className="px-10 py-4 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:-translate-y-1 shadow-red-500/20 shadow-xl"
 						>
-							START CREATING - IT'S FREE
+							{t('landing_btn_start')}
 						</button>
-						<button 
+						<button
 							onClick={() => signIn()}
 							className="px-10 py-4 bg-white hover:bg-gray-50 text-gray-900 font-bold rounded-xl text-lg border-2 border-gray-200 transition-all shadow-lg flex items-center justify-center gap-2"
 						>
-							EXPLORE SHOWCASE <ArrowRight className="w-5 h-5" />
+							{t('landing_btn_explore')} <ArrowRight className="w-5 h-5" />
 						</button>
 					</div>
 				</section>
 
+				{/* ส่วนสถิติและอื่นๆ คงเดิมไว้ก่อนให้ระบบทำงานได้ */}
 				<section className="space-y-8">
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
 						<div>
@@ -228,24 +245,24 @@ export default function LandingPage() {
 								</h2>
 								<p className="text-xs text-gray-500 font-medium mt-1">Historical platform activity aggregation</p>
 							</div>
-							
+
 							<div className="relative z-40 flex items-center gap-2 w-full sm:w-auto">
 								<DatePicker
 									selected={selectedDate}
 									onChange={(date: Date | null) => {
 										setSelectedDate(date);
-										setCurrentPage(1); // 🟢 รีเซ็ตหน้ากลับไปที่ 1 เวลาเปลี่ยนวันฟิลเตอร์
+										setCurrentPage(1);
 									}}
 									dateFormat="MMMM d, yyyy"
 									customInput={<DashboardCalendarButton />}
 									popperPlacement="bottom-end"
 								/>
 								{selectedDate && (
-									<button 
+									<button
 										onClick={() => {
 											setSelectedDate(null);
 											setCurrentPage(1);
-										}} 
+										}}
 										className="p-2 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-lg transition-colors border border-gray-100"
 										title="Clear filter"
 									>
@@ -292,19 +309,18 @@ export default function LandingPage() {
 							</h2>
 							<p className="text-xs text-gray-500 font-medium mt-1">Recent generations from our creators</p>
 						</div>
-						
-						{/* 🟢 ปุ่ม Pagination */}
+
 						<div className="flex items-center gap-2">
-							<button 
-								onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+							<button
+								onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
 								disabled={currentPage === 1}
 								className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
 							>
 								<ChevronLeft className="w-4 h-4" />
 							</button>
 							<span className="text-xs font-bold text-gray-500 px-2">Page {currentPage} of {totalPages}</span>
-							<button 
-								onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+							<button
+								onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
 								disabled={currentPage >= totalPages}
 								className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
 							>
@@ -322,12 +338,12 @@ export default function LandingPage() {
 						) : showcaseAssets.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 								{showcaseAssets.map((asset) => (
-									<div 
-										key={asset.id} 
+									<div
+										key={asset.id}
 										className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col hover:shadow-lg transition-all group hover:-translate-y-1"
 										onMouseEnter={(e) => {
 											const video = e.currentTarget.querySelector("video");
-											if (video) video.play().catch(() => {});
+											if (video) video.play().catch(() => { });
 										}}
 										onMouseLeave={(e) => {
 											const video = e.currentTarget.querySelector("video");
@@ -372,7 +388,7 @@ export default function LandingPage() {
 													{asset.type === 'IMAGE' ? <ImageIcon className="w-3 h-3" /> : <VideoIcon className="w-3 h-3" />} {asset.type}
 												</span>
 											</div>
-											<p 
+											<p
 												className="text-[11px] text-gray-500 font-medium truncate mb-3 flex-1 block"
 												title={asset.prompt}
 											>
