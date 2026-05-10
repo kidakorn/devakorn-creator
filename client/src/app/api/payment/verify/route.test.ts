@@ -82,7 +82,7 @@ describe('POST /api/payment/verify', () => {
     
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toBe('ตรวจสอบสลิปไม่ได้'); // ตรงกับที่แก้ไขใน route.ts
+    expect(json.error).toBe('Could not extract timestamp from slip');
   });
 
   // 🟢 NEW TEST: เช็คสลิปหมดอายุ (> 15 นาที)

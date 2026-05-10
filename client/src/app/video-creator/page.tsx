@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
@@ -14,8 +15,8 @@ import {
 	Monitor,
 	Clapperboard,
 	ShieldAlert,
-	Camera,     
-	Palette,    
+	Camera,
+	Palette,
 	UploadCloud,
 	X,
 	Gamepad2,
@@ -46,25 +47,25 @@ const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Ca
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const VCAT_KEYS: Record<string, TranslationKey> = {
-  'Product Showcase': 'vcat_product', 'TikTok / Reels Ad': 'vcat_tiktok',
-  'Cinematic Promo': 'vcat_cinematic', 'Stop Motion': 'vcat_stop_motion',
-  '3D Product Reveal': 'vcat_3d_reveal', 'B-Roll Footage': 'vcat_broll',
+	'Product Showcase': 'vcat_product', 'TikTok / Reels Ad': 'vcat_tiktok',
+	'Cinematic Promo': 'vcat_cinematic', 'Stop Motion': 'vcat_stop_motion',
+	'3D Product Reveal': 'vcat_3d_reveal', 'B-Roll Footage': 'vcat_broll',
 };
 const STYLE_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
-  'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
+	'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
+	'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
 };
 const CAM_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
-  'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
+	'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
+	'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
 };
 const LIGHT_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
-  'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
+	'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
+	'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
 };
 const PRES_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
-  'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
+	'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
+	'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
 };
 
 export default function VideoCreatorPage() {
@@ -73,7 +74,6 @@ export default function VideoCreatorPage() {
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
-	const [duration, setDuration] = useState('10'); // Added state for video duration
 
 	// Advanced Settings State
 	const [style, setStyle] = useState('None');
@@ -129,8 +129,8 @@ export default function VideoCreatorPage() {
 			const response = await fetch('/api/generate/enhance-prompt', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ 
-					idea: prompt, 
+				body: JSON.stringify({
+					idea: prompt,
 					category: selectedCategory,
 					tone: 'Dramatic & Cinematic',
 					length: 'Medium (around 50-80 words)',
@@ -163,12 +163,11 @@ export default function VideoCreatorPage() {
 			formData.append('prompt', prompt);
 			formData.append('category', selectedCategory);
 			formData.append('aspectRatio', aspectRatio);
-			formData.append('duration', duration); // Append duration to formData
 			formData.append('style', style);
 			formData.append('cameraAngle', cameraAngle);
 			formData.append('lighting', lighting);
 			formData.append('presenter', presenter);
-			
+
 			if (selectedFile) {
 				formData.append('image', selectedFile);
 			}
@@ -268,46 +267,6 @@ export default function VideoCreatorPage() {
 							{/* Left Panel */}
 							<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 space-y-8">
 
-								{/* Duration & Aspect Ratio Section */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
-											<Monitor className="w-4 h-4 text-red-600" /> Platform Format
-										</label>
-										<div className="flex gap-4">
-											<button
-												onClick={() => setAspectRatio('16:9')}
-												className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
-											>
-												YouTube (16:9)
-											</button>
-											<button
-												onClick={() => setAspectRatio('9:16')}
-												className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
-											>
-												TikTok / IG (9:16)
-											</button>
-										</div>
-									</div>
-
-									<div>
-										<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
-											<Clapperboard className="w-4 h-4 text-red-600" /> Video Duration
-										</label>
-										<div className="flex gap-3">
-											{['10', '15', '30'].map((sec) => (
-												<button
-													key={sec}
-													onClick={() => setDuration(sec)}
-													className={`flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-bold transition-all border ${duration === sec ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
-												>
-													{sec}s
-												</button>
-											))}
-										</div>
-									</div>
-								</div>
-
 								<div>
 									<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
 										<Video className="w-4 h-4 text-red-600" /> {t('image_category')}
@@ -383,7 +342,7 @@ export default function VideoCreatorPage() {
 											<Clapperboard className="w-4 h-4 text-red-600" />
 											{t('video_prompt_label')}
 										</label>
-										<button 
+										<button
 											onClick={handleAutoPrompt}
 											disabled={isEnhancingPrompt || !prompt}
 											className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
@@ -441,6 +400,28 @@ export default function VideoCreatorPage() {
 									)}
 								</div>
 
+								{/* 🟢 เติม Platform Format (Aspect Ratio) กลับเข้ามาตรงนี้ครับ */}
+								<div className="md:col-span-2">
+									<label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-4">
+										<Monitor className="w-4 h-4 text-red-600" /> Platform Format
+										<span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full ml-2">Standard Duration (5s)</span>
+									</label>
+									<div className="flex gap-4">
+										<button
+											onClick={() => setAspectRatio('16:9')}
+											className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '16:9' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
+										>
+											YouTube (16:9)
+										</button>
+										<button
+											onClick={() => setAspectRatio('9:16')}
+											className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-bold transition-all border ${aspectRatio === '9:16' ? 'bg-red-50 text-red-600 border-red-300 shadow-sm' : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'}`}
+										>
+											TikTok / IG (9:16)
+										</button>
+									</div>
+								</div>
+
 								<div>
 									{isBanned && (
 										<div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-bold flex items-center gap-2">
@@ -476,10 +457,10 @@ export default function VideoCreatorPage() {
 										<div className="flex flex-col items-center w-full h-full justify-center absolute inset-0 bg-gray-900 text-white p-6 z-10">
 											<h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Gamepad2 className="w-6 h-6 text-red-500" /> Wait & Play!</h3>
 											<p className="text-sm text-gray-400 mb-6 text-center">Catch the flying sparks while Veo 3.1 renders your video...</p>
-											
+
 											{/* Mini-game container */}
 											<div className="w-full max-w-sm h-48 border border-gray-700 rounded-lg relative overflow-hidden bg-gray-800 shadow-inner">
-												<div 
+												<div
 													className="absolute w-8 h-8 bg-red-500 rounded-full cursor-pointer hover:bg-red-400 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.7)] flex items-center justify-center select-none"
 													style={{ top: targetPos.top, left: targetPos.left, transition: 'top 0.4s ease-out, left 0.4s ease-out' }}
 													onMouseDown={() => setScore(s => s + 1)}
@@ -487,7 +468,7 @@ export default function VideoCreatorPage() {
 													<span className="text-xs">X</span>
 												</div>
 											</div>
-											
+
 											<div className="mt-6 font-bold text-lg bg-gray-800 px-6 py-2 rounded-full border border-gray-700 shadow-sm">
 												Score: <span className="text-red-500">{score}</span>
 											</div>

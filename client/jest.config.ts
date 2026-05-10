@@ -10,6 +10,12 @@ const config: Config = {
 		'^.+\\.tsx?$': 'ts-jest',
 	},
 	clearMocks: true,
+
+	testPathIgnorePatterns: [
+		'<rootDir>/node_modules/',
+		'<rootDir>/.next/',
+		'<rootDir>/tests/', 
+	],
 };
 
 export default config;

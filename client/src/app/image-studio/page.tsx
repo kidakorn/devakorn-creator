@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import {
-	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert, Zap,
+	Sparkles, Download, Wand2, RefreshCw, ImagePlus, UploadCloud, X, Tags, PackageOpen, ShieldAlert,
 	Camera, Palette, Sun, Layers, User // Added icons
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -26,25 +26,25 @@ const presenterOptions = ['None', 'Thai Female Model', 'Korean Female Idol', 'Ca
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const CAT_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Product Photography': 'cat_product_photo', 'T-Shirt Design': 'cat_tshirt',
-  'Sticker & Die-cut': 'cat_sticker', 'Packaging Design': 'cat_packaging', 'Seamless Pattern': 'cat_pattern',
-  'Logo Concept': 'cat_logo', '3D Icon': 'cat_3d',
+	'None': 'cat_none', 'Product Photography': 'cat_product_photo', 'T-Shirt Design': 'cat_tshirt',
+	'Sticker & Die-cut': 'cat_sticker', 'Packaging Design': 'cat_packaging', 'Seamless Pattern': 'cat_pattern',
+	'Logo Concept': 'cat_logo', '3D Icon': 'cat_3d',
 };
 const STYLE_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
-  'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
+	'None': 'cat_none', 'Cinematic': 'style_cinematic', 'Muji Style': 'style_muji', 'Cyberpunk': 'style_cyberpunk',
+	'Anime': 'style_anime', 'Vintage': 'style_vintage', '3D Animation': 'style_3d_anim', 'Realistic': 'style_realistic', 'Fantasy': 'style_fantasy',
 };
 const CAM_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
-  'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
+	'None': 'cat_none', 'Drone View': 'cam_drone', 'Close-up': 'cam_closeup', 'Wide Angle': 'cam_wide',
+	'Macro': 'cam_macro', 'Tracking Shot': 'cam_tracking', 'Pan': 'cam_pan', 'First-Person View (FPV)': 'cam_fpv',
 };
 const LIGHT_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
-  'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
+	'None': 'cat_none', 'Cinematic Lighting': 'light_cinematic', 'Natural Light': 'light_natural', 'Neon': 'light_neon',
+	'Golden Hour': 'light_golden', 'Studio Lighting': 'light_studio', 'Dark & Moody': 'light_dark',
 };
 const PRES_KEYS: Record<string, TranslationKey> = {
-  'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
-  'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
+	'None': 'cat_none', 'Thai Female Model': 'pres_thai_f', 'Korean Female Idol': 'pres_korean_f',
+	'Caucasian Male Model': 'pres_western_m', 'Minimalist Hand Model': 'pres_hand', 'Lifestyle Group': 'pres_group',
 };
 
 export default function ImageStudio() {
@@ -66,7 +66,6 @@ export default function ImageStudio() {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-	const [quality, setQuality] = useState<'fast' | 'pro'>('pro');
 	const [generationMode, setGenerationMode] = useState<'standard' | 'bg_replacement'>('standard');
 	const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
 
@@ -78,7 +77,7 @@ export default function ImageStudio() {
 	const currentCoins = balanceData?.coinBalance ?? 0;
 	const isBanned = balanceData?.isBanned ?? false;
 
-	const currentCost = quality === 'fast' ? 29 : 49;
+	const currentCost = 39;
 
 	const isButtonDisabled = isGenerating || !prompt || currentCoins < currentCost || isBanned;
 
@@ -114,8 +113,8 @@ export default function ImageStudio() {
 			const response = await fetch('/api/generate/enhance-prompt', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ 
-					idea: prompt, 
+				body: JSON.stringify({
+					idea: prompt,
 					category: selectedCategory,
 					tone: 'Creative & Professional',
 					length: 'Medium (around 50-80 words)',
@@ -148,7 +147,6 @@ export default function ImageStudio() {
 			formData.append('prompt', prompt);
 			formData.append('aspectRatio', aspectRatio);
 			formData.append('category', selectedCategory);
-			formData.append('quality', quality);
 
 			// Send advanced settings within FormData
 			formData.append('style', style);
@@ -237,34 +235,6 @@ export default function ImageStudio() {
 
 							<div className="space-y-3">
 								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
-									<Zap className="w-4 h-4 text-primary-red" /> {t('image_quality')}
-								</label>
-								<div className="flex gap-4">
-									<button
-										onClick={() => setQuality('fast')}
-										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3.5 rounded-xl transition-all border ${quality === 'fast' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm transform scale-[1.02]' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white hover:border-gray-300'}`}
-									>
-										<span className="text-sm font-black">Standard Render</span>
-										<span className="text-[10px] font-medium opacity-70">Economy Quality</span>
-										<span className={`text-[10px] font-bold mt-1 px-2 py-0.5 rounded-md ${quality === 'fast' ? 'bg-primary-red/20 text-primary-red' : 'bg-gray-200 text-gray-500'}`}>
-											29 Coins
-										</span>
-									</button>
-									<button
-										onClick={() => setQuality('pro')}
-										className={`flex-1 flex flex-col items-center justify-center gap-1 py-3.5 rounded-xl transition-all border ${quality === 'pro' ? 'bg-primary-red/10 border-primary-red text-primary-red shadow-sm transform scale-[1.02]' : 'bg-light-gray/50 border-gray-200 text-text-main/60 hover:bg-white hover:border-gray-300'}`}
-									>
-										<span className="text-sm font-black flex items-center gap-1">Studio Premium</span>
-										<span className="text-[10px] font-medium opacity-70">Ultra-HD Render</span>
-										<span className={`text-[10px] font-bold mt-1 px-2 py-0.5 rounded-md ${quality === 'pro' ? 'bg-primary-red/20 text-primary-red' : 'bg-gray-200 text-gray-500'}`}>
-											49 Coins
-										</span>
-									</button>
-								</div>
-							</div>
-
-							<div className="space-y-3">
-								<label className="text-sm font-bold text-dark-bg flex items-center gap-2">
 									<Layers className="w-4 h-4 text-primary-red" /> {t('image_generation_mode')}
 								</label>
 								<div className="flex gap-4">
@@ -304,7 +274,7 @@ export default function ImageStudio() {
 							</div>
 
 							{/* Advanced Settings */}
-							<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
+							<div className="grid grid-cols-2 lg:grid-cols-2 gap-3 bg-light-gray/30 p-3.5 rounded-xl border border-gray-100">
 								<div>
 									<label className="flex items-center gap-1.5 text-[11px] font-bold text-dark-bg mb-1.5">
 										<User className="w-3.5 h-3.5 text-primary-red" /> {t('image_presenter')}
@@ -361,7 +331,7 @@ export default function ImageStudio() {
 										<Wand2 className="w-4 h-4 text-primary-red" />
 										Core Product Idea
 									</label>
-									<button 
+									<button
 										onClick={handleAutoPrompt}
 										disabled={isEnhancingPrompt || !prompt}
 										className="text-xs font-bold text-primary-red bg-primary-red/10 hover:bg-primary-red/20 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"

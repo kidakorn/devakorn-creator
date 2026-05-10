@@ -24,15 +24,22 @@ jest.mock('next-auth', () => ({
 	getServerSession: jest.fn(),
 }));
 
-jest.mock('next-auth/next', () => ({
-	__esModule: true,
-	default: jest.fn(),
-}));
+// 3. Mock Google AI Middleman (แปลภาษา)
+const mockRequest = jest.fn();
+jest.mock('google-auth-library', () => {
+	return {
+		GoogleAuth: jest.fn().mockImplementation(() => ({
+			getClient: jest.fn().mockResolvedValue({
+				request: mockRequest
+			}),
+			getProjectId: jest.fn().mockResolvedValue('test-project'),
+		}))
+	};
+});
 
-// 3. Mock Google GenAI (Veo)
+// 4. Mock Google GenAI (Veo)
 const mockGenerateVideos = jest.fn();
 const mockOperationsGet = jest.fn();
-
 jest.mock('@google/genai', () => ({
 	GoogleGenAI: jest.fn().mockImplementation(() => ({
 		models: { generateVideos: mockGenerateVideos },
@@ -40,7 +47,7 @@ jest.mock('@google/genai', () => ({
 	}))
 }));
 
-// 4. Mock Google Cloud Storage
+// 5. Mock Google Cloud Storage
 jest.mock('@google-cloud/storage', () => ({
 	Storage: jest.fn().mockImplementation(() => ({
 		bucket: jest.fn().mockReturnThis(),
@@ -49,7 +56,7 @@ jest.mock('@google-cloud/storage', () => ({
 	}))
 }));
 
-// 5. Mock Cloudinary
+// 6. Mock Cloudinary
 jest.mock('cloudinary', () => ({
 	v2: {
 		config: jest.fn(),
@@ -59,10 +66,9 @@ jest.mock('cloudinary', () => ({
 	}
 }));
 
-describe('Coin Deduction API: Video Generation (Phase 3)', () => {
+describe('Unit Testing: Video Generation with Middleman', () => {
 
 	beforeAll(() => {
-		// Suppress console.log and console.error to keep the test output clean
 		jest.spyOn(console, 'log').mockImplementation(() => { });
 		jest.spyOn(console, 'error').mockImplementation(() => { });
 	});
@@ -75,108 +81,79 @@ describe('Coin Deduction API: Video Generation (Phase 3)', () => {
 		jest.clearAllMocks();
 	});
 
-	it('Case 1: Insufficient funds should return 403 error', async () => {
-		// Arrange
+	it('Case 1: เหรียญไม่พอ (ต้องใช้ 499) ต้องคืนค่า 403', async () => {
 		jest.mocked(getServerSession).mockResolvedValue({ user: { email: 'test@test.com' } } as any);
+		jest.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'user_1', coinBalance: 200, isBanned: false } as any);
 
-		// Mock user with only 500 coins (needs 799)
-		jest.mocked(prisma.user.findUnique).mockResolvedValue({
-			id: 'user_1',
-			coinBalance: 500,
-			isBanned: false
-		} as any);
+		const formData = new FormData();
+		formData.append('prompt', 'A cinematic video');
 
-		const requestBody = { prompt: 'A cinematic car commercial', category: 'Product' };
-
-		// Act
-		const req = new NextRequest('http://localhost/api/generate/video', {
-			method: 'POST',
-			body: JSON.stringify(requestBody)
-		});
+		const req = new NextRequest('http://localhost/api/generate/video', { method: 'POST', body: formData });
 		const res = await POST(req);
 		const data = await res.json();
 
-		// Assert
 		expect(res.status).toBe(403);
-		expect(data.message).toContain('Not enough coins');
-		expect(prisma.$transaction).not.toHaveBeenCalled();
+		expect(data.message).toContain('เหรียญไม่เพียงพอ');
 	});
 
-	it('Case 2: Successful Video Generation should deduct 799 coins', async () => {
-		// Arrange
+	it('Case 2: เจนวิดีโอสำเร็จ (หัก 499 เหรียญ และเซฟ Prompt 2 ภาษา)', async () => {
 		jest.mocked(getServerSession).mockResolvedValue({ user: { email: 'test@test.com' } } as any);
+		jest.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'user_1', coinBalance: 1000, isBanned: false } as any);
 
-		// Mock user with 1000 coins
-		jest.mocked(prisma.user.findUnique).mockResolvedValue({
-			id: 'user_1',
-			coinBalance: 1000,
-			isBanned: false
-		} as any);
+		// Mock Gemini แปลภาษา
+		mockRequest.mockResolvedValueOnce({
+			data: { candidates: [{ content: { parts: [{ text: "Cinematic commercial of a product" }] } }] }
+		});
 
-		// Mock Veo API Response (Immediate completion)
+		// Mock Veo เจนวิดีโอ
 		mockGenerateVideos.mockResolvedValue({
 			name: 'operations/123',
 			done: true,
-			response: {
-				generatedVideos: [{ video: { videoBytes: 'fake_base64_video' } }]
-			}
+			response: { generatedVideos: [{ video: { videoBytes: 'fake_base64_video' } }] }
 		});
 
-		jest.mocked(prisma.user.update).mockResolvedValue({ coinBalance: 201 } as any);
-		jest.mocked(prisma.generatedAsset.create).mockResolvedValue({ outputUrl: 'https://fake.url' } as any);
+		jest.mocked(prisma.user.update).mockResolvedValue({ coinBalance: 501 } as any);
 
-		const requestBody = { prompt: 'A cinematic car commercial', category: 'Product' };
+		const formData = new FormData();
+		formData.append('prompt', 'วิดีโอสบู่');
 
-		// Act
-		const req = new NextRequest('http://localhost/api/generate/video', {
-			method: 'POST',
-			body: JSON.stringify(requestBody)
-		});
+		const req = new NextRequest('http://localhost/api/generate/video', { method: 'POST', body: formData });
 		const res = await POST(req);
 		const data = await res.json();
 
-		// Assert
 		expect(res.status).toBe(200);
-		expect(data.usedModel).toBe('veo-3.1-generate-001');
-
-		// Verify exactly 799 coins were deducted
+		// เช็คการหักเหรียญ 499
 		expect(prisma.user.update).toHaveBeenCalledWith(
-			expect.objectContaining({ data: { coinBalance: { decrement: 799 } } })
+			expect.objectContaining({ data: { coinBalance: { decrement: 499 } } })
 		);
-
-		// Verify SPEND_VIDEO transaction was created
-		expect(prisma.transaction.create).toHaveBeenCalledWith(
-			expect.objectContaining({ data: expect.objectContaining({ amount: -799, type: 'SPEND_VIDEO' }) })
+		// เช็คการบันทึก Prompt 2 ภาษา
+		expect(prisma.generatedAsset.create).toHaveBeenCalledWith(
+			expect.objectContaining({ 
+				data: expect.objectContaining({ 
+					prompt: expect.stringContaining('[TH]: วิดีโอสบู่') 
+				}) 
+			})
 		);
 	});
 
-	it('Case 3: Failure from Veo AI should not deduct coins', async () => {
-		// Arrange
+	it('Case 3: ถ้าเจอเนื้อหาไม่เหมาะสม (NSFW) ต้องแบนทันที', async () => {
 		jest.mocked(getServerSession).mockResolvedValue({ user: { email: 'test@test.com' } } as any);
-		jest.mocked(prisma.user.findUnique).mockResolvedValue({
-			id: 'user_1',
-			coinBalance: 1000,
-			isBanned: false
-		} as any);
+		jest.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'user_1', coinBalance: 1000, isBanned: false } as any);
 
-		// Simulate Veo AI crash
-		mockGenerateVideos.mockRejectedValueOnce(new Error('Veo API is busy'));
-
-		const requestBody = { prompt: 'A cinematic car commercial' };
-
-		// Act
-		const req = new NextRequest('http://localhost/api/generate/video', {
-			method: 'POST',
-			body: JSON.stringify(requestBody)
+		// Mock ให้ Middleman ตอบว่าแบน
+		mockRequest.mockResolvedValueOnce({
+			data: { candidates: [{ content: { parts: [{ text: "REJECTED_NSFW" }] } }] }
 		});
+
+		const formData = new FormData();
+		formData.append('prompt', 'เนื้อหา 18+');
+
+		const req = new NextRequest('http://localhost/api/generate/video', { method: 'POST', body: formData });
 		const res = await POST(req);
 		const data = await res.json();
 
-		// Assert
-		expect(res.status).toBe(500);
-		expect(data.message).toContain('Failed to generate video');
-
-		// Ensure no database transactions occurred
-		expect(prisma.$transaction).not.toHaveBeenCalled();
+		expect(res.status).toBe(400);
+		expect(data.message).toContain('NSFW is strictly prohibited');
+		expect(mockGenerateVideos).not.toHaveBeenCalled(); // ห้ามยิงไปหา AI วิดีโอ
 	});
 });

@@ -7,6 +7,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { v2 as cloudinary } from 'cloudinary';
 import path from "path";
+import { GoogleAuth } from "google-auth-library";
 
 cloudinary.config({
 	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -34,60 +35,90 @@ export async function POST(req: Request) {
 			}, { status: 403 });
 		}
 
-		// Receive FormData to support image uploads
+		// 🟢 เติมโค้ดชุดนี้เข้าไป เพื่อรับค่าตัวแปรทั้งหมดจากหน้าเว็บ
 		const formData = await req.formData();
 		const prompt = formData.get('prompt') as string;
 		const category = formData.get('category') as string;
 		const aspectRatio = formData.get('aspectRatio') as string;
-		const duration = formData.get('duration') as string; // Get duration from frontend
-		const cameraAngle = formData.get('cameraAngle') as string;
 		const style = formData.get('style') as string;
+		const cameraAngle = formData.get('cameraAngle') as string;
 		const lighting = formData.get('lighting') as string;
 		const presenter = formData.get('presenter') as string;
+
+		// ดึงไฟล์รูปภาพอ้างอิง (ถ้าลูกค้าแนบรูปมา)
 		const imageFile = formData.get('image') as File | null;
-		
-		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a video prompt." }, { status: 400 });
+		let inputImageBase64 = null;
+		let inputImageMimeType = null;
 
-		// Price is adjusted according to the logic
-		const COST_PER_VIDEO = 499;
-
-		if (user.coinBalance < COST_PER_VIDEO) {
-			return NextResponse.json({
-				status: "error",
-				message: `Not enough coins! You need ${COST_PER_VIDEO} coins to produce a video ad.`
-			}, { status: 403 });
-		}
-
-		// Process Image if uploaded (Convert to Base64 for Veo AI)
-		let inputImageBase64 = undefined;
-		let inputImageMimeType = undefined;
 		if (imageFile) {
 			const arrayBuffer = await imageFile.arrayBuffer();
 			inputImageBase64 = Buffer.from(arrayBuffer).toString('base64');
 			inputImageMimeType = imageFile.type;
 		}
 
-		// Dynamic Prompt construction
-		let finalPrompt = prompt;
-		if (category && category !== "None") finalPrompt += `, Category: ${category}`;
-		if (style && style !== "None") finalPrompt += `, Style: ${style}`;
-		if (cameraAngle && cameraAngle !== "None") finalPrompt += `, Camera: ${cameraAngle}`;
-		if (lighting && lighting !== "None") finalPrompt += `, Lighting: ${lighting}`;
-		if (presenter && presenter !== "None") finalPrompt += `, Feature a highly realistic ${presenter} holding or interacting with the product`;
-		if (duration) finalPrompt += `. Ensure the video duration is exactly ${duration} seconds long.`;
+		if (!prompt) return NextResponse.json({ status: "error", message: "Please provide a prompt." }, { status: 400 });
+
+		const COST_PER_VIDEO = 499; // ตั้งราคาหักเหรียญ
+
+		if (user.coinBalance < COST_PER_VIDEO) {
+			return NextResponse.json({ status: "error", message: "เหรียญไม่เพียงพอ (Not enough coins)." }, { status: 403 });
+		}
 
 		// Load credentials
 		const keyPath = path.resolve(process.cwd(), "vertex-key.json");
 		process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
 
-		const client = new GoogleGenAI({ vertexai: true, project: 'devakorn-creator-ai', location: 'us-central1' });
+		const auth = new GoogleAuth({ keyFile: keyPath, scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+		const authClient = await auth.getClient();
+		const projectId = await auth.getProjectId();
+		const location = 'us-central1';
+
+		// 🟢 AI MIDDLEMAN: แปลภาษา, กรองคำหยาบ, และจัดทรง Prompt
+		const translatorUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.0-flash-001:generateContent`;
+		const systemInstruction = `You are an elite AI Prompt Translator and Moderator for commercial video generation.
+        1. Translate the user's Thai prompt to highly descriptive English.
+        2. CONTENT MODERATION: Sanitize any inappropriate Thai slang (e.g., "Naa Hee").
+        3. STRICT NSFW BAN: If the user's prompt requests nudity, pornography, or explicit adult material, you MUST reply with exactly "REJECTED_NSFW".
+        4. Incorporate these settings naturally into the English prompt:
+           - Category: ${category || 'None'}
+           - Style: ${style || 'None'}
+           - Camera Angle: ${cameraAngle || 'None'}
+           - Lighting: ${lighting || 'None'}
+           - Presenter: ${presenter || 'None'}
+        5. Output ONLY the final English prompt. No explanations.`;
+
+		let finalEnglishPrompt = prompt;
+
+		try {
+			const translateRes = await authClient.request({
+				url: translatorUrl,
+				method: 'POST',
+				data: {
+					contents: [{ role: "user", parts: [{ text: `User Prompt: ${prompt}` }] }],
+					systemInstruction: { parts: [{ text: systemInstruction }] },
+					generationConfig: { temperature: 0.2, maxOutputTokens: 300 }
+				}
+			});
+
+			const resultText = (translateRes.data as any).candidates[0].content.parts[0].text.trim();
+
+			if (resultText === "REJECTED_NSFW") {
+				return NextResponse.json({ status: "error", message: "ไม่อนุญาตให้สร้างวิดีโอที่มีเนื้อหาโป๊เปลือย (NSFW is strictly prohibited)." }, { status: 400 });
+			}
+			finalEnglishPrompt = resultText;
+		} catch (err) {
+			console.error("AI Middleman Failed", err);
+			finalEnglishPrompt = `A high quality commercial video of ${prompt}. Style: ${style}. Lighting: ${lighting}.`;
+		}
+
+		const client = new GoogleGenAI({ vertexai: true, project: projectId, location: location });
 		const storage = new Storage({ keyFilename: keyPath });
 
 		console.log(`[1/3] Submitting video job to Veo AI (Price: ${COST_PER_VIDEO} Coins)...`);
-		
+
 		const videoOptions: any = {
 			model: 'veo-3.1-generate-001',
-			prompt: finalPrompt,
+			prompt: finalEnglishPrompt, // 🟢 ส่ง Prompt ที่แปลแล้วไปให้ Veo
 			config: { aspectRatio: aspectRatio || "16:9" }
 		};
 
@@ -151,7 +182,7 @@ export async function POST(req: Request) {
 				data: {
 					userId: user.id,
 					type: "VIDEO",
-					prompt: finalPrompt,
+					prompt: `[TH]: ${prompt}\n[EN]: ${finalEnglishPrompt}`,
 					category: category || "None",
 					outputUrl: uploadResponse.secure_url,
 					aspectRatio: aspectRatio || "16:9"
