@@ -46,17 +46,17 @@ const LEN_KEYS: Record<string, TranslationKey> = {
 	'Long (around 100-150 words)': 'len_long',
 };
 const LIGHT_KEYS: Record<string, TranslationKey> = {
-  'Studio Light': 'light_studio',
-  'Natural Light': 'light_natural',
-  'Golden Hour': 'light_golden',
-  'Dark & Moody': 'light_dark',
-  'Neon': 'light_neon',
+	'Studio Light': 'light_studio',
+	'Natural Light': 'light_natural',
+	'Golden Hour': 'light_golden',
+	'Dark & Moody': 'light_dark',
+	'Neon': 'light_neon',
 };
 const CAM_KEYS: Record<string, TranslationKey> = {
-  'Close-up': 'cam_closeup',
-  'Wide Angle': 'cam_wide',
-  'Top-down': 'cam_drone', // ใช้ cam_drone แทนชั่วคราวได้ครับ
-  'Eye-level': 'cam_tracking', // ใช้ cam_tracking หรือเพิ่ม key ใหม่ใน translations.ts ก็ได้ครับ
+	'Close-up': 'cam_closeup',
+	'Wide Angle': 'cam_wide',
+	'Top-down': 'cam_drone', // ใช้ cam_drone แทนชั่วคราวได้ครับ
+	'Eye-level': 'cam_tracking', // ใช้ cam_tracking หรือเพิ่ม key ใหม่ใน translations.ts ก็ได้ครับ
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -69,6 +69,8 @@ export default function PromptEnhancerPage() {
 	const [enhancedPrompt, setEnhancedPrompt] = useState("");
 	const [isEnhancing, setIsEnhancing] = useState(false);
 	const [isCopied, setIsCopied] = useState(false);
+	const [showInfo, setShowInfo] = useState(false);
+	const [modalLang, setModalLang] = useState<'th' | 'en'>('th');
 
 	// State for Advanced Settings
 	const [tone, setTone] = useState("Creative & Professional");
@@ -153,7 +155,105 @@ export default function PromptEnhancerPage() {
 							<PackageOpen className="w-6 h-6 text-primary-red" />
 							{t('prompt_title')}
 						</h1>
-						<p className="text-text-main/60 text-sm mt-1 font-medium">{t('prompt_sub')}</p>
+						{/* <p className="text-text-main/60 text-sm mt-1 font-medium">{t('prompt_sub')}</p> */}
+						<div className="mt-2">
+							<button
+								onClick={() => setShowInfo(true)}
+								className="flex items-center gap-1.5 text-xs font-bold text-text-main/60 hover:text-primary-red transition-colors"
+							>
+								<div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-black">?</div>
+								{t('show_info')}
+							</button>
+
+							{/* Modal Overlay */}
+							{showInfo && (
+								<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-bg/40 backdrop-blur-sm animate-in fade-in">
+
+									{/* Modal Box */}
+									<div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+
+										{/* Modal Header */}
+										<div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-light-gray/20 shrink-0">
+											<div className="flex items-center gap-4">
+												<h3 className="text-lg font-black text-dark-bg flex items-center gap-2">
+													<PackageOpen className="w-5 h-5 text-primary-red" />
+													{modalLang === 'th' ? 'คู่มือการใช้งาน Prompt Magic' : 'Prompt Magic Guide'}
+												</h3>
+
+												{/* TH/EN Toggle Button */}
+												<div className="flex bg-gray-200 rounded-lg p-0.5">
+													<button
+														onClick={() => setModalLang('th')}
+														className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${modalLang === 'th' ? 'bg-white text-primary-red shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
+													>
+														TH
+													</button>
+													<button
+														onClick={() => setModalLang('en')}
+														className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${modalLang === 'en' ? 'bg-white text-primary-red shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
+													>
+														EN
+													</button>
+												</div>
+											</div>
+											<button
+												onClick={() => setShowInfo(false)}
+												className="text-text-main/40 hover:text-primary-red transition-colors text-xl leading-none font-bold p-1 absolute top-4 right-4 sm:static"
+											>
+												✕
+											</button>
+										</div>
+
+										{/* Modal Body (Scrollable) */}
+										<div className="p-6 overflow-y-auto space-y-6 text-sm text-text-main/80">
+											<p className="font-bold text-dark-bg text-lg border-l-4 border-primary-red pl-3 bg-light-gray/20 py-2.5 rounded-r-lg">
+												{modalLang === 'th'
+													? 'ระบบนี้จะช่วยขยายไอเดียสั้นๆ ของคุณ ให้กลายเป็นคำสั่ง (Prompt) ระดับมืออาชีพที่ AI สร้างภาพเข้าใจได้ดีที่สุด'
+													: 'This tool transforms your short ideas into highly detailed, professional prompts that image-generation AIs understand best.'}
+											</p>
+
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												{(modalLang === 'th' ? [
+													{ title: "1. ไอเดียของคุณ", desc: "พิมพ์สิ่งที่คุณต้องการสั้นๆ เช่น 'สบู่บนโขดหิน' หรือ 'ขวดน้ำหอมหรูหรา' ให้ระบบรู้เป้าหมายหลัก" },
+													{ title: "2. หมวดหมู่", desc: "เลือกประเภทงานเพื่อให้ AI เข้าใจโครงสร้างภาพหลัก เช่น 'ถ่ายภาพสินค้า' จะเน้นจุดเด่นที่ตัวสินค้าเป็นหลัก" },
+													{ title: "3. โทน", desc: "กำหนดบรรยากาศและอารมณ์ของภาพ เช่น โทน 'หรูหรา' จะทำให้ AI เลือกใช้คำศัพท์ที่เกี่ยวกับความพรีเมียมและสง่างาม" },
+													{ title: "4. ความยาว", desc: "กำหนดความละเอียดของ Prompt ยิ่งระบุว่า 'ยาว' AI จะยิ่งเพิ่มเติมรายละเอียดของสภาพแวดล้อมและพื้นหลังได้สมบูรณ์ขึ้น" },
+													{ title: "5. ภาษาที่ต้องการ", desc: "แนะนำให้เลือก 'English' เสมอ เนื่องจาก AI สร้างภาพระดับโลกส่วนใหญ่จะเข้าใจและประมวลผลภาษาอังกฤษได้แม่นยำที่สุด" },
+													{ title: "6. แสง", desc: "กำหนดลักษณะการตกกระทบของแสง เช่น 'แสงสตูดิโอ' ให้ภาพที่เคลียร์ชัดเจน ส่วน 'แสงธรรมชาติ' จะดูนุ่มนวลสมจริง" },
+													{ title: "7. มุมกล้อง", desc: "กำหนดระยะการมองเห็น เช่น 'ระยะใกล้' เพื่อเน้นรายละเอียดและพื้นผิวสินค้า หรือ 'มุมกว้าง' เพื่อให้เห็นบริบทและบรรยากาศโดยรอบ" }
+												] : [
+													{ title: "1. Your Idea", desc: "Type a simple concept, e.g., 'soap on a rock' or 'luxury perfume bottle' to set the main subject." },
+													{ title: "2. Category", desc: "Select the artwork type to help AI structure the core image (e.g., 'Product Photography' for product-centric ads)." },
+													{ title: "3. Tone", desc: "Sets the mood and atmosphere. For instance, 'Luxury' will prompt the AI to use premium-related keywords." },
+													{ title: "4. Length", desc: "Determines the level of detail. Selecting 'Long' allows the AI to thoroughly describe backgrounds and environments." },
+													{ title: "5. Output Language", desc: "'English' is highly recommended as most global image-generation AIs understand and process it best." },
+													{ title: "6. Lighting", desc: "Defines the illumination style. 'Studio Light' gives a clean and crisp look, while 'Natural Light' feels softer." },
+													{ title: "7. Camera Angle", desc: "Sets the perspective. 'Close-up' focuses on product textures, while 'Wide Angle' shows the surrounding environment." }
+												]).map((item, idx) => (
+													<div key={idx} className="bg-light-gray/30 p-4 rounded-xl border border-gray-100 hover:border-primary-red/30 transition-colors">
+														<h4 className="font-bold text-dark-bg mb-1.5 text-base">{item.title}</h4>
+														<p className="text-sm text-text-main/70 leading-relaxed">{item.desc}</p>
+													</div>
+												))}
+											</div>
+										</div>
+
+										{/* Modal Footer */}
+										<div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end shrink-0">
+											<button
+												onClick={() => setShowInfo(false)}
+												className="px-6 py-2.5 bg-dark-bg text-white rounded-xl text-sm font-bold hover:bg-primary-red transition-all active:scale-95 shadow-sm"
+											>
+												{modalLang === 'th' ? 'เข้าใจแล้ว ปิดหน้าต่าง' : 'Got it, close window'}
+											</button>
+										</div>
+									</div>
+
+									{/* คลิกพื้นหลังเพื่อปิด */}
+									<div className="absolute inset-0 -z-10" onClick={() => setShowInfo(false)}></div>
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 

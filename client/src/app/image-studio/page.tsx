@@ -56,6 +56,8 @@ export default function ImageStudio() {
 	const [isGenerating, setIsLoading] = useState(false);
 	const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 	const [aspectRatio, setAspectRatio] = useState("1:1");
+	const [showInfo, setShowInfo] = useState(false);
+	const [modalLang, setModalLang] = useState<'th' | 'en'>('th');
 
 	// State for Advanced Settings
 	const [style, setStyle] = useState('None');
@@ -219,15 +221,122 @@ export default function ImageStudio() {
 		<DashboardLayout>
 			<div className="w-full pb-12 animate-in fade-in duration-500">
 
+				<div className="mb-6">
+					<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
+						<PackageOpen className="w-6 h-6 text-primary-red" />
+						{t('image_title')}
+					</h1>
+					<div className="mt-2">
+						<button
+							onClick={() => setShowInfo(true)}
+							className="flex items-center gap-1.5 text-xs font-bold text-text-main/60 hover:text-primary-red transition-colors"
+						>
+							<div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-black">?</div>
+							{t('show_info') || 'ดูวิธีใช้งาน'}
+						</button>
+
+						{/* Modal Overlay */}
+						{showInfo && (
+							<div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-dark-bg/40 backdrop-blur-sm animate-in fade-in">
+
+								{/* Modal Box */}
+								<div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+
+									{/* Modal Header */}
+									<div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-light-gray/20 shrink-0">
+										<div className="flex items-center gap-4">
+											<h3 className="text-xl font-black text-dark-bg flex items-center gap-2">
+												<PackageOpen className="w-6 h-6 text-primary-red" />
+												{modalLang === 'th' ? 'คู่มือการใช้งาน Image Studio' : 'Image Studio Guide'}
+											</h3>
+
+											{/* TH/EN Toggle Button */}
+											<div className="flex bg-gray-200 rounded-lg p-0.5">
+												<button
+													onClick={() => setModalLang('th')}
+													className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${modalLang === 'th' ? 'bg-white text-primary-red shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
+												>
+													TH
+												</button>
+												<button
+													onClick={() => setModalLang('en')}
+													className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${modalLang === 'en' ? 'bg-white text-primary-red shadow-sm' : 'text-gray-500 hover:text-dark-bg'}`}
+												>
+													EN
+												</button>
+											</div>
+										</div>
+										<button
+											onClick={() => setShowInfo(false)}
+											className="text-text-main/40 hover:text-primary-red transition-colors text-2xl leading-none font-bold p-1 absolute top-4 right-4 sm:static"
+										>
+											✕
+										</button>
+									</div>
+
+									{/* Modal Body (Scrollable) */}
+									<div className="p-6 overflow-y-auto space-y-6 text-sm text-text-main/80">
+										<p className="font-bold text-dark-bg text-lg border-l-4 border-primary-red pl-3 bg-light-gray/20 py-3 rounded-r-lg">
+											{modalLang === 'th'
+												? 'ระบบนี้เปรียบเสมือนสตูดิโอถ่ายภาพส่วนตัวของคุณ คุณสามารถสร้างภาพโฆษณาสินค้าใหม่ทั้งหมด หรือเปลี่ยนพื้นหลังภาพสินค้าเดิมให้สวยงามระดับโปรได้ง่ายๆ'
+												: 'This tool acts as your personal virtual studio. You can generate completely new commercial images or seamlessly replace the background of your existing products.'}
+										</p>
+
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											{(modalLang === 'th' ? [
+												{ title: "1. โหมดการสร้าง (Generation Mode)", desc: "เลือก 'Standard' เพื่อสร้างภาพใหม่จากศูนย์ด้วยข้อความ หรือเลือก 'AI Background' เพื่ออัปโหลดรูปสินค้าของคุณ แล้วให้ AI เปลี่ยนฉากหลังให้ใหม่" },
+												{ title: "2. หมวดหมู่ (Category)", desc: "ระบุประเภทของชิ้นงาน เช่น 'ถ่ายภาพสินค้า' หรือ 'ออกแบบเสื้อยืด' เพื่อให้ระบบเข้าใจโครงสร้างและจัดวางองค์ประกอบภาพได้ถูกต้องที่สุด" },
+												{ title: "3. ผู้นำเสนอ (Presenter)", desc: "ต้องการให้มีคนอยู่ในภาพไหม? เลือกเพิ่ม 'นางแบบ', 'นายแบบ' หรือ 'มือ' เพื่อช่วยนำเสนอสินค้าให้ดูมีชีวิตชีวาและดึงดูดสายตามากขึ้น" },
+												{ title: "4. สไตล์ (Style)", desc: "กำหนดทิศทางศิลปะของภาพรวม เช่น เลือก 'Muji' เพื่อความมินิมอลเรียบง่าย หรือ 'Cinematic' เพื่อให้ออกมาดูอลังการเหมือนฉากในภาพยนตร์" },
+												{ title: "5. มุมกล้อง (Camera Angle)", desc: "กำหนดระยะการมองเห็น เช่น 'ระยะใกล้' เพื่อเน้นให้เห็นพื้นผิวและรายละเอียดสินค้าชัดๆ หรือ 'มุมกว้าง' เพื่อโชว์บรรยากาศรอบๆ" },
+												{ title: "6. แสง (Lighting)", desc: "เลือกทิศทางแสงเพื่อสร้างอารมณ์ภาพ เช่น 'แสงสตูดิโอ' สำหรับภาพที่เคลียร์คมชัด หรือ 'แสงธรรมชาติ' สำหรับภาพที่ดูนุ่มนวลสบายตา" },
+												{ title: "7. Core Product Idea", desc: "พิมพ์อธิบายสิ่งที่คุณต้องการสร้าง หรือหากคิดไม่ออก ให้กดปุ่ม 'ให้ AI คิดให้' เพื่อให้ระบบแต่งประโยคคำสั่งระดับมืออาชีพให้คุณทันที" },
+												{ title: "8. อัปโหลดรูปภาพ (Upload)", desc: "หากใช้โหมด Standard สามารถอัปโหลดภาพร่างเพื่อเป็นแนวทางได้ แต่ถ้าใช้โหมด AI Background จำเป็นต้องอัปโหลดรูปภาพสินค้าของคุณเสมอ" },
+												{ title: "9. สัดส่วนภาพ (Aspect Ratio)", desc: "เลือกขนาดให้เหมาะกับแพลตฟอร์มของคุณ: 1:1 สำหรับโพสต์ทั่วไป, 16:9 สำหรับหน้าเว็บไซต์, และ 9:16 สำหรับสตอรี่หรือวิดีโอสั้น" }
+											] : [
+												{ title: "1. Generation Mode", desc: "Select 'Standard' to generate a new image from text, or 'AI Background' to upload your product photo and have AI create a completely new scene around it." },
+												{ title: "2. Category", desc: "Define the type of artwork, such as 'Product Photography' or 'T-Shirt Design', to help the AI structure the composition accurately." },
+												{ title: "3. Presenter", desc: "Want a human element? Select a model or a hand to interact with your product, making the image more engaging and lifestyle-oriented." },
+												{ title: "4. Style", desc: "Define the overall artistic direction. Choose 'Muji' for a clean minimalist look, or 'Cinematic' for dramatic, movie-like quality." },
+												{ title: "5. Camera Angle", desc: "Set the perspective. Use 'Close-up' to highlight product textures and details, or 'Wide Angle' to showcase the surrounding environment." },
+												{ title: "6. Lighting", desc: "Choose the illumination to set the mood. 'Studio Light' provides crisp, clear details, while 'Natural Light' offers a softer, realistic feel." },
+												{ title: "7. Core Product Idea", desc: "Describe what you want to see. Stuck? Click the 'Let AI Think' button and the system will write a highly optimized prompt for you." },
+												{ title: "8. Upload Image", desc: "In Standard mode, upload a sketch as a rough guide. In AI Background mode, you MUST upload a clear photo of your actual product." },
+												{ title: "9. Aspect Ratio", desc: "Choose the best fit for your platform: 1:1 for standard social feeds, 16:9 for websites, and 9:16 for Stories or Reels." }
+											]).map((item, idx) => (
+												<div key={idx} className="bg-light-gray/30 p-4.5 rounded-xl border border-gray-100 hover:border-primary-red/30 transition-colors">
+													<h4 className="font-bold text-dark-bg mb-2 text-base">{item.title}</h4>
+													<p className="text-sm text-text-main/70 leading-relaxed">{item.desc}</p>
+												</div>
+											))}
+										</div>
+									</div>
+
+									{/* Modal Footer */}
+									<div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end shrink-0">
+										<button
+											onClick={() => setShowInfo(false)}
+											className="px-8 py-3 bg-dark-bg text-white rounded-xl text-base font-bold hover:bg-primary-red transition-all active:scale-95 shadow-sm"
+										>
+											{modalLang === 'th' ? 'เข้าใจแล้ว ปิดหน้าต่าง' : 'Got it, close window'}
+										</button>
+									</div>
+								</div>
+
+								{/* คลิกพื้นหลังเพื่อปิด */}
+								<div className="absolute inset-0 -z-10" onClick={() => setShowInfo(false)}></div>
+							</div>
+						)}
+					</div>
+				</div>
+
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-					<div className="lg:col-span-4 space-y-6">
+					<div className="lg:col-span-4">
 						<div>
-							<h1 className="text-2xl font-black text-dark-bg tracking-tight mb-1 flex items-center gap-2">
-								<PackageOpen className="w-6 h-6 text-primary-red" />
-								{t('image_title')}
-							</h1>
+
 							<div>
-								<p className="text-sm font-medium text-text-main/50 mt-1">{t('image_sub')}</p>
+								{/* <p className="text-sm font-medium text-text-main/50 mt-1">{t('image_sub')}</p> */}
+
 							</div>
 						</div>
 

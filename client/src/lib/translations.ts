@@ -45,6 +45,8 @@ export const translations = {
   // ---- IMAGE STUDIO ----
   image_title: { en: 'Image Studio', th: 'Image Studio' },
   image_sub: { en: 'Generate commercial product images with AI.', th: 'สร้างรูปภาพสินค้าเชิงพาณิชย์ด้วย AI' },
+  image_desc: { en: 'Turn ideas into premium commercial images. Adjust camera angles, lighting, and style as if you have a virtual studio on your screen.', th: 'เปลี่ยนคำสั่งให้เป็นภาพสินค้าสุดพรีเมียม ปรับแต่งมุมกล้อง ทิศทางแสง และสไตล์ภาพได้ดั่งใจ เหมือนย้ายสตูดิโอมาไว้บนหน้าจอ' },
+  image_example: { en: '(Best for: Product photography, Before/After showcases, or Catalogs)', th: '(เหมาะสำหรับ: ทำภาพโปรโมทสินค้า, ภาพ Before/After หรือแคตตาล็อก)' },
   image_prompt_label: { en: 'Describe your image', th: 'อธิบายภาพที่ต้องการ' },
   image_generate_btn: { en: 'Generate Image', th: 'สร้างภาพ' },
   image_generating: { en: 'Generating...', th: 'กำลังสร้าง...' },
@@ -67,6 +69,8 @@ export const translations = {
   // ---- VIDEO CREATOR ----
   video_title: { en: 'Video Creator', th: 'Video Creator' },
   video_sub: { en: 'Generate commercial video ads with AI.', th: 'สร้างวิดีโอโฆษณาด้วย AI' },
+  video_desc: { en: 'Upload your product image and let AI animate it realistically. Capture attention and keep your audience engaged until the very end.', th: 'อัปโหลดภาพสินค้าของคุณ แล้วสั่งให้ AI ทำให้ภาพเคลื่อนไหวได้สมจริง ดึงดูดสายตาลูกค้าให้หยุดนิ้วดูจนจบ' },
+  video_example: { en: '(Best for: Short clips for TikTok, Reels, or standout social ads)', th: '(เหมาะสำหรับ: ทำคลิปสั้นลง TikTok, Reels หรือโฆษณาที่ต้องการความโดดเด่น)' },
   video_prompt_label: { en: 'Describe your video scene', th: 'อธิบายฉากวิดีโอ' },
   video_generate_btn: { en: 'Generate Video Ad', th: 'สร้างวิดีโอโฆษณา' },
   video_duration: { en: 'Duration', th: 'ความยาว' },
@@ -76,6 +80,8 @@ export const translations = {
   // ---- CAMPAIGN BUILDER ----
   campaign_title: { en: 'Campaign Builder', th: 'Campaign Builder' },
   campaign_sub: { en: 'Turn your images into high-converting social media posts in 1-click.', th: 'เปลี่ยนรูปภาพเป็นโพสต์โซเชียลที่ขายดีด้วยคลิกเดียว' },
+  campaign_desc: { en: 'Combine your generated images with compelling copy, structured for conversion, ready to be published instantly.', th: 'นำภาพสินค้ามาจัดวางในรูปแบบแคมเปญ พร้อมแคปชันและเลย์เอาต์ที่ออกแบบมาเพื่อกระตุ้นยอดขาย นำไปโพสต์ใช้งานได้ทันที' },
+  campaign_example: { en: '(Best for: Facebook Ads, Instagram posts, or direct sales campaigns)', th: '(เหมาะสำหรับ: โฆษณา Facebook, โพสต์ Instagram หรือแคมเปญขายตรง)' },
   campaign_settings: { en: 'Campaign Settings', th: 'ตั้งค่าแคมเปญ' },
   campaign_select_image: { en: 'Select Image from Gallery', th: 'เลือกรูปจากแกลเลอรี' },
   campaign_platform: { en: 'Platform', th: 'แพลตฟอร์ม' },
@@ -99,6 +105,8 @@ export const translations = {
   // ---- PROMPT ENHANCER ----
   prompt_title: { en: 'Prompt Magic', th: 'Prompt Magic' },
   prompt_sub: { en: 'Transform simple ideas into professional AI prompts.', th: 'เปลี่ยนไอเดียง่ายๆ ให้เป็น Prompt ระดับมืออาชีพ' },
+  prompt_magic_desc: { en: 'Type a short idea and let AI generate a professional prompt for the best image results.', th: 'พิมพ์ไอเดียสั้นๆ ภาษาไทย แล้วปล่อยให้ AI แต่งประโยคคำสั่งระดับมืออาชีพให้คุณ เพื่อผลลัพธ์ภาพที่สวยเป๊ะที่สุด' },
+  prompt_magic_example: { en: '(Example: Type "soap on a rock" and AI will expand it into a stunning studio scene)', th: '(ตัวอย่าง: พิมพ์แค่ "สบู่บนหิน" AI จะขยายเป็นฉากสตูดิโอสุดอลังการให้)' },
   prompt_input_label: { en: 'Your simple idea', th: 'ไอเดียของคุณ' },
   prompt_enhance_btn: { en: 'Enhance Prompt', th: 'ปรับปรุง Prompt' },
   prompt_copy: { en: 'Copy', th: 'คัดลอก' },
@@ -145,6 +153,8 @@ export const translations = {
   wallet_min_amount: { en: 'Minimum amount is', th: 'จำนวนขั้นต่ำคือ' },
 
   // ---- GENERAL ----
+  show_info: { en: 'How to use', th: 'ดูวิธีใช้งาน' },
+  hide_info: { en: 'Hide info', th: 'ซ่อนวิธีใช้งาน' },
   general_copy: { en: 'Copy', th: 'คัดลอก' },
   general_copied: { en: 'Copied!', th: 'คัดลอกแล้ว!' },
   general_download: { en: 'Download', th: 'ดาวน์โหลด' },
@@ -240,6 +250,7 @@ export const translations = {
   landing_hero_sub: { en: 'Unlock the power of advanced AI models to build high-quality commercial assets instantly. Join the future of content creation.', th: 'ปลดล็อกพลังของโมเดล AI ขั้นสูงเพื่อสร้างสรรค์ชิ้นงานโฆษณาคุณภาพสูงได้ทันที พลิกโฉมอนาคตของการทำคอนเทนต์' },
   landing_btn_start: { en: "START CREATING - IT'S FREE", th: 'เริ่มต้นสร้างผลงาน - ใช้ฟรี' },
   landing_btn_explore: { en: 'EXPLORE SHOWCASE', th: 'ดูผลงานในชุมชน' },
+
 } as const;
 
 export type TranslationKey = keyof typeof translations;

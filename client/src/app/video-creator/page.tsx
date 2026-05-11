@@ -74,6 +74,8 @@ export default function VideoCreatorPage() {
 	const [prompt, setPrompt] = useState('');
 	const [selectedCategory, setSelectedCategory] = useState('Product Showcase');
 	const [aspectRatio, setAspectRatio] = useState('16:9');
+	const [showInfo, setShowInfo] = useState(false);
+	const [modalLang, setModalLang] = useState<'th' | 'en'>('th');
 
 	// Advanced Settings State
 	const [style, setStyle] = useState('None');
@@ -253,7 +255,7 @@ export default function VideoCreatorPage() {
 			<div className="w-full bg-[#f8f9fa] text-text-main font-sans pb-12">
 				<main className="w-full">
 					<div className="p-6 sm:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-500">
-						<div className="mb-8">
+						{/* <div className="mb-8">
 							<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
 								<Clapperboard className="w-8 h-8 text-red-600" />
 								{t('video_title')}
@@ -261,7 +263,118 @@ export default function VideoCreatorPage() {
 							<p className="text-gray-500 mt-2 text-sm font-medium">
 								{t('video_sub')}
 							</p>
+						</div> */}
+						{/* 1. ส่วนหัวข้อและปุ่มเปิด Modal */}
+						<div className="mb-6">
+							<h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
+								<Clapperboard className="w-8 h-8 text-red-600" />
+								{t('video_title')}
+							</h1>
+
+							<div className="mt-2">
+								<button
+									onClick={() => setShowInfo(true)}
+									className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-red-600 transition-colors"
+								>
+									<div className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-black">?</div>
+									{t('show_info') || 'ดูวิธีใช้งาน'}
+								</button>
+
+								{/* Modal Overlay */}
+								{showInfo && (
+									<div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in">
+
+										{/* Modal Box */}
+										<div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+
+											{/* Modal Header */}
+											<div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50 shrink-0">
+												<div className="flex items-center gap-4">
+													<h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+														<Clapperboard className="w-6 h-6 text-red-600" />
+														{modalLang === 'th' ? 'คู่มือการใช้งาน Video Creator' : 'Video Creator Guide'}
+													</h3>
+
+													{/* TH/EN Toggle Button */}
+													<div className="flex bg-gray-200 rounded-lg p-0.5">
+														<button
+															onClick={() => setModalLang('th')}
+															className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${modalLang === 'th' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+														>
+															TH
+														</button>
+														<button
+															onClick={() => setModalLang('en')}
+															className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${modalLang === 'en' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+														>
+															EN
+														</button>
+													</div>
+												</div>
+												<button
+													onClick={() => setShowInfo(false)}
+													className="text-gray-400 hover:text-red-600 transition-colors text-2xl leading-none font-bold p-1 absolute top-4 right-4 sm:static"
+												>
+													✕
+												</button>
+											</div>
+
+											{/* Modal Body (Scrollable) */}
+											<div className="p-6 overflow-y-auto space-y-6 text-sm text-gray-800">
+												<p className="font-bold text-gray-900 text-lg border-l-4 border-red-600 pl-3 bg-gray-50 py-3 rounded-r-lg">
+													{modalLang === 'th'
+														? 'ระบบนี้ช่วยเปลี่ยนภาพนิ่งและไอเดียของคุณให้เป็นวิดีโอโฆษณาที่เคลื่อนไหวได้สมจริง ดึงดูดความสนใจและเพิ่มยอดขายได้อย่างมีประสิทธิภาพ'
+														: 'This tool transforms your static images and ideas into realistic, engaging video ads that capture attention and drive sales effectively.'}
+												</p>
+
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{(modalLang === 'th' ? [
+														{ title: "1. หมวดหมู่ (Category)", desc: "เลือกรูปแบบวิดีโอ เช่น 'Product Showcase' สำหรับโชว์สินค้า หรือ 'TikTok / Reels Ad' สำหรับวิดีโอแนวตั้งที่ต้องการดึงดูดสายตาอย่างรวดเร็ว" },
+														{ title: "2. ผู้นำเสนอ (Presenter)", desc: "ต้องการให้มีคนนำเสนอในวิดีโอหรือไม่? เลือกเพื่อเพิ่มความมีชีวิตชีวาและความน่าเชื่อถือให้กับสินค้า" },
+														{ title: "3. สไตล์ (Style)", desc: "กำหนดทิศทางศิลปะ เช่น 'Cinematic' เพื่อภาพลักษณ์ที่ดูหรูหราอลังการ หรือ '3D Animation' สำหรับสินค้าที่ต้องการความล้ำสมัย" },
+														{ title: "4. มุมกล้องและแสง (Camera & Light)", desc: "กำหนดมุมมองและการจัดแสง เช่น 'Drone View' สำหรับภาพมุมกว้าง หรือ 'Studio Lighting' เพื่อความคมชัดระดับมืออาชีพ" },
+														{ title: "5. อธิบายฉาก (Video Prompt)", desc: "พิมพ์อธิบายฉากวิดีโอที่ต้องการ หรือกดปุ่ม 'ให้ AI คิดให้' เพื่อให้ระบบช่วยเขียนสคริปต์และคำสั่งที่สมบูรณ์แบบ" },
+														{ title: "6. รูปอ้างอิง (Upload Reference)", desc: "อัปโหลดรูปภาพสินค้าหรือภาพร่างเพื่อใช้เป็นเฟรมแรกของวิดีโอ (แนะนำให้ใส่เพื่อความแม่นยำของผลลัพธ์)" },
+														{ title: "7. สัดส่วนวิดีโอ (Platform Format)", desc: "เลือกขนาดให้เหมาะกับแพลตฟอร์มของคุณ: 16:9 สำหรับ YouTube หรือหน้าเว็บไซต์ และ 9:16 สำหรับ TikTok หรือ Instagram Reels" },
+														{ title: "8. เกมระหว่างรอ (Wait & Play)", desc: "ระหว่างรอ AI ประมวลผลวิดีโอ (ประมาณ 1-3 นาที) คุณสามารถเล่นมินิเกมคลิกเก็บคะแนนเพื่อฆ่าเวลาได้" }
+													] : [
+														{ title: "1. Category", desc: "Choose the video format, such as 'Product Showcase' to highlight items, or 'TikTok / Reels Ad' for engaging vertical videos." },
+														{ title: "2. Presenter", desc: "Decide if you want a human presenter in the video to add liveliness and credibility to your product." },
+														{ title: "3. Style", desc: "Define the art direction, like 'Cinematic' for a luxurious feel or '3D Animation' for a modern, high-tech look." },
+														{ title: "4. Camera & Light", desc: "Set the perspective and illumination, such as 'Drone View' for aerial shots or 'Studio Lighting' for professional clarity." },
+														{ title: "5. Video Prompt", desc: "Describe the desired video scene, or click 'Let AI Think' to have the system write a perfect, detailed prompt for you." },
+														{ title: "6. Upload Reference", desc: "Upload a product photo or sketch to use as the first frame of the video (highly recommended for accuracy)." },
+														{ title: "7. Platform Format", desc: "Choose the aspect ratio tailored to your platform (16:9 for YouTube/Websites or 9:16 for TikTok/Reels)." },
+														{ title: "8. Wait & Play", desc: "While waiting for the AI to render your video (approx. 1-3 minutes), you can play a quick point-and-click mini-game." }
+													]).map((item, idx) => (
+														<div key={idx} className="bg-gray-50 p-4.5 rounded-xl border border-gray-100 hover:border-red-200 transition-colors">
+															<h4 className="font-bold text-gray-900 mb-2 text-base">{item.title}</h4>
+															<p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+														</div>
+													))}
+												</div>
+											</div>
+
+											{/* Modal Footer */}
+											<div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end shrink-0">
+												<button
+													onClick={() => setShowInfo(false)}
+													className="px-8 py-3 bg-gray-900 text-white rounded-xl text-base font-bold hover:bg-red-600 transition-all active:scale-95 shadow-sm"
+												>
+													{modalLang === 'th' ? 'เข้าใจแล้ว ปิดหน้าต่าง' : 'Got it, close window'}
+												</button>
+											</div>
+										</div>
+
+										{/* คลิกพื้นหลังเพื่อปิด */}
+										<div className="absolute inset-0 -z-10" onClick={() => setShowInfo(false)}></div>
+									</div>
+								)}
+							</div>
 						</div>
+
+						{/* 2. ปรับ Grid ให้เริ่มชิดบนเสมอ */}
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start"></div>
 
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 							{/* Left Panel */}
@@ -451,8 +564,8 @@ export default function VideoCreatorPage() {
 							</div>
 
 							{/* Right Panel */}
-							<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col min-h-125">
-								<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-100">
+							<div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 flex flex-col min-h-150 lg:sticky lg:top-6">
+								<div className="flex-1 flex items-center justify-center bg-[#f8f9fa] rounded-xl border-2 border-dashed border-gray-200 overflow-hidden relative min-h-125">
 									{isGenerating ? (
 										<div className="flex flex-col items-center w-full h-full justify-center absolute inset-0 bg-gray-900 text-white p-6 z-10">
 											<h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Gamepad2 className="w-6 h-6 text-red-500" /> Wait & Play!</h3>
