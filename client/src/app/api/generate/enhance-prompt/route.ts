@@ -84,6 +84,11 @@ export async function POST(req: Request) {
                     category: category || "General",
                     outputUrl: generatedText,
                     aspectRatio: "TEXT",
+                    tone: tone || null,
+                    length: length || null,
+                    outputLanguage: outputLanguage || null,
+                    lighting: lighting || null,
+                    cameraAngle: cameraAngle || null
                     // usedModel: selectedModel
                 }
             }),

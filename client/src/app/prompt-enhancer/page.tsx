@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from 'swr';
 import { Wand2, Sparkles, Copy, CheckCircle2, Tags, PackageOpen, ShieldAlert, Type, AlignLeft, Globe } from "lucide-react";
@@ -71,11 +71,12 @@ export default function PromptEnhancerPage() {
 	const [isCopied, setIsCopied] = useState(false);
 	const [showInfo, setShowInfo] = useState(false);
 	const [modalLang, setModalLang] = useState<'th' | 'en'>('th');
+	const [placeholderText, setPlaceholderText] = useState("พิมพ์ไอเดียของคุณ เช่น สบู่สมุนไพร หรือ เสื้อยืดสีขาว...");
 
 	// State for Advanced Settings
 	const [tone, setTone] = useState("Creative & Professional");
 	const [length, setLength] = useState("Medium (around 50-80 words)");
-	const [outputLanguage, setOutputLanguage] = useState("English");
+	const [outputLanguage, setOutputLanguage] = useState("Thai");
 	const [lighting, setLighting] = useState("Studio Light");
 	const [cameraAngle, setCameraAngle] = useState("Close-up");
 
@@ -144,6 +145,16 @@ export default function PromptEnhancerPage() {
 	};
 
 	const isButtonDisabled = isEnhancing || !idea || currentCoins < currentCost || isBanned;
+
+	useEffect(() => {
+		const examples = [
+			"เช่น ขวดเซรั่มบำรุงผิวขวดแก้วใส วางตั้งอยู่บนแท่นหินอ่อนสีขาว มีหยดน้ำเกาะ...",
+			"เช่น แก้วกาแฟลาเต้ร้อนฟองนมลายหัวใจ วางบนโต๊ะไม้เก่าๆ ในคาเฟ่วินเทจ มีควันลอย...",
+			"เช่น ผู้หญิงกำลังเดินสวมเสื้อยืดสีขาวคอกลมแบบเรียบๆ ทรงโอเวอร์ไซส์ ยืนโพสท่าอย่างมั่นใจ..."
+		];
+		const randomExample = examples[Math.floor(Math.random() * examples.length)];
+		setPlaceholderText(randomExample);
+	}, []);
 
 	return (
 		<DashboardLayout>
@@ -360,7 +371,7 @@ export default function PromptEnhancerPage() {
 									rows={4}
 									value={idea}
 									onChange={(e) => setIdea(e.target.value)}
-									placeholder="e.g., A luxury perfume bottle with floral scent..."
+									placeholder={placeholderText}
 									className="flex-1 w-full bg-light-gray/30 border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-dark-bg focus:bg-white focus:border-primary-red/40 focus:ring-4 focus:ring-primary-red/5 outline-none transition-all resize-none"
 								/>
 							</div>

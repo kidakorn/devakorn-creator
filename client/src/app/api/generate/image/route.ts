@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         const lighting = formData.get('lighting') as string;
         const presenter = formData.get('presenter') as string;
 
-        // 🟢 1. ดึงไฟล์รูปภาพ Reference Sketch แปลงเป็น Base64 (ถ้าลูกค้าแนบมา)
+        // 1. ดึงไฟล์รูปภาพ Reference Sketch แปลงเป็น Base64
         const imageFile = formData.get('image') as File | null;
         let base64Image = null;
         if (imageFile) {
@@ -64,7 +64,10 @@ export async function POST(req: Request) {
         const projectId = await auth.getProjectId();
         const location = 'us-central1';
 
-        // 🟢 2. AI MIDDLEMAN: เพิ่มกฎเหล็กแบน 18+ ขั้นเด็ดขาด
+        // 🟢 2. AUTO-NEGATIVE PROMPTS: กำหนดคำสั่งแง่ลบขั้นเด็ดขาดดักไว้ที่ Server
+        const AUTO_NEGATIVE_PROMPT = "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, mutated hands, extra fingers, disconnected limbs, mutation, ugly, blurry, low resolution, watermark, text, signature, bad proportions, unnatural colors, bad lighting, cropped, out of frame";
+
+        // 3. AI MIDDLEMAN: ปรับ System Instruction ใหม่ให้สะอาดขึ้น (ไม่ต้องพ่วง Negative prompt เองแล้ว)
         const translatorUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.0-flash-001:generateContent`;
         const systemInstruction = `You are an elite AI Prompt Translator and Moderator for commercial product photography.
         1. Translate the user's Thai prompt to highly descriptive English.
@@ -76,8 +79,7 @@ export async function POST(req: Request) {
            - Camera Angle: ${cameraAngle || 'None'}
            - Lighting: ${lighting || 'None'}
            - Presenter: ${presenter || 'None'}
-        5. CRITICAL: At the very end of your output, you MUST add exactly this string: " | NEGATIVE PROMPT: ugly, deformed, blurry, poor quality, watermark, text, out of frame, animal, cat, dog, extra fingers, nsfw, nude".
-        6. Output ONLY the final English prompt. No explanations.`;
+        5. Output ONLY the final English prompt. No explanations or extra text.`;
 
         let finalEnglishPrompt = prompt;
 
@@ -94,7 +96,6 @@ export async function POST(req: Request) {
 
             const resultText = (translateRes.data as any).candidates[0].content.parts[0].text.trim();
 
-            // 🟢 ดักจับถ้า Middleman เจอข้อความ 18+ คืนเงินให้เลยไม่หักเหรียญ
             if (resultText === "REJECTED_NSFW") {
                 return NextResponse.json({ status: "error", message: "ไม่อนุญาตให้สร้างภาพที่มีเนื้อหาโป๊เปลือย หรือผิดกฎหมาย (NSFW is strictly prohibited)." }, { status: 400 });
             }
@@ -102,16 +103,15 @@ export async function POST(req: Request) {
 
         } catch (err) {
             console.error("AI Middleman Failed, using fallback prompt.", err);
-            finalEnglishPrompt = `A commercial product photo of ${prompt}. Style: ${style}. Lighting: ${lighting}. | NEGATIVE PROMPT: ugly, text, watermark, animal, cat, dog, nsfw, nude`;
+            finalEnglishPrompt = `A commercial product photo of ${prompt}. Style: ${style}. Lighting: ${lighting}.`;
         }
 
         const selectedModel = 'imagen-3.0-generate-001';
         const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${selectedModel}:predict`;
 
-        // 🟢 3. ประกอบร่างคำสั่งสำหรับ Imagen
+        // 🟢 4. ประกอบร่างคำสั่งสำหรับ Imagen และแทรก negativePrompt เข้าไปใน parameters
         const instanceData: any = { prompt: finalEnglishPrompt };
 
-        // ถ้ามีการแนบรูปภาพอ้างอิงมา (Reference Sketch) ให้ส่งไปให้ AI ด้วย!
         if (base64Image) {
             instanceData.image = { bytesBase64Encoded: base64Image };
         }
@@ -121,8 +121,9 @@ export async function POST(req: Request) {
             parameters: {
                 sampleCount: 1,
                 aspectRatio: aspectRatio || "16:9",
-                safetySetting: "block_most", // 🟢 เปิดเซนเซอร์ภาพล่อแหลมขั้นสูงสุดของ Google (ป้องกันรูปแนบที่โป๊เปลือย)
-                personGeneration: "allow_adult"
+                safetySetting: "block_most",
+                personGeneration: "allow_adult",
+                negativePrompt: AUTO_NEGATIVE_PROMPT // ส่งคำสั่งห้ามภาพเพี้ยนเข้า API โดยตรง
             }
         };
 
@@ -152,6 +153,10 @@ export async function POST(req: Request) {
                     category: category || "General",
                     outputUrl: uploadResponse.secure_url,
                     aspectRatio: aspectRatio || "16:9",
+                    style: style || null,
+                    cameraAngle: cameraAngle || null,
+                    lighting: lighting || null,
+                    presenter: presenter || null
                     // usedModel: selectedModel
                 }
             }),
@@ -161,7 +166,7 @@ export async function POST(req: Request) {
                     type: 'SPEND_IMAGE',
                     amount: -COST_PER_IMAGE,
                     balanceAfter: user.coinBalance - COST_PER_IMAGE,
-                    description: `Generated Image: ${prompt.substring(0, 30)}...`,
+                    description: `Generated Image: ${prompt.substring(0, 15)}...`,
                     status: 'COMPLETED',
                 }
             })
@@ -178,7 +183,6 @@ export async function POST(req: Request) {
         console.error("Image Generation Error:", error?.response?.data || error.message);
         const errorMsg = JSON.stringify(error?.response?.data || "");
 
-        // 🟢 ถ้าระบบหลังบ้านจับได้ว่ารูปหรือข้อความผิดกฎหมาย
         if (errorMsg.includes("safety") || errorMsg.includes("blocked")) {
             return NextResponse.json({ status: "error", message: "ระบบตรวจพบเนื้อหาหรือรูปภาพที่ไม่เหมาะสม (Safety Filter Triggered)." }, { status: 400 });
         }

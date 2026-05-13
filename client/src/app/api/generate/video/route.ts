@@ -185,7 +185,11 @@ export async function POST(req: Request) {
 					prompt: `[TH]: ${prompt}\n[EN]: ${finalEnglishPrompt}`,
 					category: category || "None",
 					outputUrl: uploadResponse.secure_url,
-					aspectRatio: aspectRatio || "16:9"
+					aspectRatio: aspectRatio || "16:9",
+					style: style || null,
+                    cameraAngle: cameraAngle || null,
+                    lighting: lighting || null,
+                    presenter: presenter || null
 				}
 			}),
 			prisma.transaction.create({
@@ -194,7 +198,7 @@ export async function POST(req: Request) {
 					type: 'SPEND_VIDEO',
 					amount: -COST_PER_VIDEO,
 					balanceAfter: user.coinBalance - COST_PER_VIDEO,
-					description: `Video Ad Creation: ${prompt.substring(0, 30)}...`,
+					description: `Video Ad Creation: ${prompt.substring(0, 15)}...`,
 					status: 'COMPLETED',
 				}
 			})

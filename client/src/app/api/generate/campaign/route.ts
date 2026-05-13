@@ -109,7 +109,12 @@ export async function POST(req: Request) {
 					prompt: generatedCaption,
 					category: platform || "Social Media",
 					outputUrl: imageUrl,
-					aspectRatio: "TEXT"
+					aspectRatio: "TEXT",
+					platform: platform || null,
+                    tone: tone || null, 
+                    outputLanguage: language || null,
+                    objective: objective || null,
+                    targetAudience: audience || null
 				}
 			}),
 			prisma.transaction.create({

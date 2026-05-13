@@ -55,9 +55,9 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  
+
   // 🟢 1. เปลี่ยนค่าเริ่มต้นเป็น 0 ป้องกันการสมัครปุ๊บได้ปั๊บ
-  coinBalance   Int       @default(0)
+  coinBalance Int @default(0)
 
   // 🟢 2. เพิ่มตัวแปรเช็คว่าเคยกดรับสิทธิ์ฟรี 50 Coins ไปหรือยัง
   hasClaimedFreeCoins Boolean @default(false)
@@ -76,8 +76,8 @@ model User {
   generatedAssets GeneratedAsset[]
 
   // 🟢 เพิ่มความสัมพันธ์สำหรับระบบ Social
-  likes    Like[]
-  comments Comment[]
+  likes         Like[]
+  comments      Comment[]
   checkInStreak Int       @default(0)
   lastCheckIn   DateTime?
 }
@@ -87,12 +87,22 @@ model GeneratedAsset {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type        String // "IMAGE", "VIDEO", "PROMPT", หรือ "CAMPAIGN"
-  prompt      String   @db.Text
-  category    String?
-  outputUrl   String   @db.Text
-  aspectRatio String?
-  createdAt   DateTime @default(now())
+  type           String // "IMAGE", "VIDEO", "PROMPT", หรือ "CAMPAIGN"
+  prompt         String   @db.Text
+  category       String?
+  outputUrl      String   @db.Text
+  aspectRatio    String?
+  style          String?
+  cameraAngle    String?
+  lighting       String?
+  presenter      String?
+  tone           String?
+  length         String?
+  outputLanguage String?
+  platform       String?
+  objective      String?
+  targetAudience String?
+  createdAt      DateTime @default(now())
 
   // 🟢 ตัวนับสถิติ (Counters) เพื่อเอาไปทำระบบ จัดอันดับ/Trending (Data is King)
   likeCount    Int @default(0)
@@ -139,14 +149,14 @@ model Comment {
 
 enum TransactionType {
   TOPUP
-  TOPUP_SLIP           // 🟢 เพิ่มประเภทสำหรับการเติมเงินผ่านสลิป
+  TOPUP_SLIP // 🟢 เพิ่มประเภทสำหรับการเติมเงินผ่านสลิป
   SPEND_IMAGE
   SPEND_VIDEO
   SPEND_PROMPT
   REFUND
-  FREE_BONUS           // เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
+  FREE_BONUS // เพิ่มประเภทแจกฟรี เพื่อให้รู้ว่าเหรียญมาจากไหน
   SPEND_CAMPAIGN
-  EARN_CREATOR_REWARD  // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
+  EARN_CREATOR_REWARD // 🟢 รายได้ของเจ้าของผลงาน (เช่น ยอด Like ถึงเป้า)
   EARN_SUPPORTER_BONUS // 🟢 โบนัสเล็กๆ น้อยๆ สำหรับคนช่วยกด Like/Comment สร้าง Viral Loop
   DAILY_CHECKIN
 }
@@ -176,7 +186,7 @@ model DeviceFingerprint {
   id        String   @id @default(cuid())
   visitorId String   @unique // รหัสประจำเครื่อง (จาก FingerprintJS)
   userId    String // ใครเป็นคนใช้เครื่องนี้กดรับไป
-  ip        String?  // 🟢 เก็บ IP ของคนที่กดรับสิทธิ์
+  ip        String? // 🟢 เก็บ IP ของคนที่กดรับสิทธิ์
   createdAt DateTime @default(now())
 }
 

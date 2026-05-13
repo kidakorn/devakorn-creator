@@ -457,11 +457,18 @@ export default function VideoCreatorPage() {
 										</label>
 										<button
 											onClick={handleAutoPrompt}
-											disabled={isEnhancingPrompt || !prompt}
-											className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all disabled:opacity-50"
+											disabled={isEnhancingPrompt || currentCoins < 15}
+											className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${isEnhancingPrompt || currentCoins < 15
+													? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+													: 'bg-primary-red/10 text-primary-red hover:bg-primary-red hover:text-white'
+												}`}
 										>
-											{isEnhancingPrompt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-											{t('image_let_ai_think')}
+											{isEnhancingPrompt ? (
+												<RefreshCw className="w-3.5 h-3.5 animate-spin" />
+											) : (
+												<Sparkles className="w-3.5 h-3.5" />
+											)}
+											{isEnhancingPrompt ? 'กำลังคิด...' : `${t('image_let_ai_think')} (-15 Coins)`}
 										</button>
 									</div>
 									<textarea
