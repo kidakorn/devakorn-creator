@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 // 🟢 1. Import useRouter เพื่อใช้พาวาร์ปเปลี่ยนหน้า
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw, FileText, Megaphone } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, Download, Copy, CheckCircle2, RefreshCw, FileText, Megaphone, Globe, Globe2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Asset {
 	id: string;
@@ -13,6 +14,7 @@ interface Asset {
 	prompt: string;
 	outputUrl: string;
 	category?: string;
+	isPublic: boolean;
 	createdAt: string;
 }
 
@@ -88,6 +90,37 @@ export default function GalleryPage() {
 		localStorage.setItem("selectedCampaignImage", imageUrl);
 		// พาวาร์ปไปหน้า Campaign Builder
 		router.push("/campaign-builder");
+	};
+
+	const togglePublic = async (asset: Asset) => {
+		try {
+			const newStatus = !asset.isPublic;
+			// Update local UI state immediately for better UX
+			setAssets(assets.map(a => a.id === asset.id ? { ...a, isPublic: newStatus } : a));
+
+			const response = await fetch(`/api/assets/${asset.id}/publish`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ isPublic: newStatus })
+			});
+			const data = await response.json();
+			
+			if (data.status !== "success") {
+				// Revert if failed
+				setAssets(assets.map(a => a.id === asset.id ? { ...a, isPublic: asset.isPublic } : a));
+				toast.error("Failed to update status");
+			} else {
+				if (newStatus) {
+					toast.success("Published to Community!");
+				} else {
+					toast.success("Made private");
+				}
+			}
+		} catch (error) {
+			console.error(error);
+			setAssets(assets.map(a => a.id === asset.id ? { ...a, isPublic: asset.isPublic } : a));
+			toast.error("Connection error");
+		}
 	};
 
 	useEffect(() => {
@@ -198,6 +231,13 @@ export default function GalleryPage() {
 												title="Copy Prompt"
 											>
 												{copiedId === asset.id ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+											</button>
+											<button
+												onClick={() => togglePublic(asset)}
+												className={`p-2.5 bg-white rounded-xl shadow-lg transition-all ${asset.isPublic ? "text-primary-red hover:bg-red-50" : "text-gray-400 hover:text-dark-bg hover:bg-gray-100"}`}
+												title={asset.isPublic ? "Make Private" : "Publish to Community"}
+											>
+												{asset.isPublic ? <Globe className="w-4 h-4" /> : <Globe2 className="w-4 h-4" />}
 											</button>
 										</div>
 

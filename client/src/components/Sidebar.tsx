@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import {
 	LayoutDashboard, Sparkles, VideoIcon, Settings as SettingsIcon,
 	Wand2, ChevronLeft, ChevronRight, Image as ImageIcon, Wallet, ShieldCheck,
-	User, Eye, Megaphone, X
+	User, Eye, Megaphone, X, Globe
 } from "lucide-react";
 import { useLanguage } from "@/lib/useLanguage";
 
@@ -19,6 +19,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean; to
 
 	const navItems = [
 		{ nameKey: 'nav_overview' as const, href: "/", icon: LayoutDashboard },
+		{ nameKey: 'nav_explore' as const, href: "/explore", icon: Globe },
 		{ nameKey: 'nav_prompt_magic' as const, href: "/prompt-enhancer", icon: Wand2 },
 		{ nameKey: 'nav_image_studio' as const, href: "/image-studio", icon: Sparkles },
 		{ nameKey: 'nav_video_creator' as const, href: "/video-creator", icon: VideoIcon },

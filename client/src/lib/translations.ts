@@ -6,6 +6,7 @@ export type Language = 'th' | 'en';
 export const translations = {
   // ---- SIDEBAR ----
   nav_overview: { en: 'Overview', th: 'ภาพรวม' },
+  nav_explore: { en: 'Explore', th: 'คอมมูนิตี้' },
   nav_prompt_magic: { en: 'Prompt Magic', th: 'Prompt Magic' },
   nav_image_studio: { en: 'Image Studio', th: 'Image Studio' },
   nav_video_creator: { en: 'Video Creator', th: 'Video Creator' },

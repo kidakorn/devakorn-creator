@@ -102,6 +102,7 @@ model GeneratedAsset {
   platform       String?
   objective      String?
   targetAudience String?
+  isPublic       Boolean  @default(false) // 🟢 เพิ่มสวิตช์สำหรับเปิดเป็น Public โชว์หน้า Explore
   createdAt      DateTime @default(now())
 
   // 🟢 ตัวนับสถิติ (Counters) เพื่อเอาไปทำระบบ จัดอันดับ/Trending (Data is King)

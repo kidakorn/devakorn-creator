@@ -30,9 +30,33 @@ export default function AdminGallery() {
 		fetcher, { refreshInterval: 15000 }
 	);
 
-	const handleDelete = async (id: string) => {
-		if (!confirm("Are you sure you want to delete this content? This cannot be undone.")) return;
+	const handleDelete = (id: string) => {
+		toast((t) => (
+			<div className="flex flex-col gap-3 p-1">
+				<p className="font-bold text-gray-800">Delete Content?</p>
+				<p className="text-sm text-gray-500">Are you sure you want to delete this? This action cannot be undone.</p>
+				<div className="flex gap-2 justify-end mt-2">
+					<button
+						className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+						onClick={() => toast.dismiss(t.id)}
+					>
+						Cancel
+					</button>
+					<button
+						className="px-4 py-2 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors"
+						onClick={() => {
+							toast.dismiss(t.id);
+							confirmDelete(id);
+						}}
+					>
+						Confirm Delete
+					</button>
+				</div>
+			</div>
+		), { duration: Infinity, position: 'top-center' });
+	};
 
+	const confirmDelete = async (id: string) => {
 		const toastId = toast.loading("Deleting content...");
 		try {
 			const res = await fetch(`/api/admin/assets?id=${id}`, { method: 'DELETE' });
@@ -159,7 +183,7 @@ export default function AdminGallery() {
 											<video src={asset.outputUrl} controls muted className="w-full h-full object-cover bg-black" />
 										)}
 
-										<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+										<div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
 											<a href={asset.outputUrl} target="_blank" rel="noreferrer" className="p-2 bg-white/90 text-gray-700 hover:text-blue-600 rounded-lg backdrop-blur-sm shadow-sm">
 												<ExternalLink className="w-4 h-4" />
 											</a>
